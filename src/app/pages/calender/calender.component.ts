@@ -1,14 +1,16 @@
-import { KeyValuePipe } from '@angular/common';
+import { KeyValuePipe, CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FullCalendarComponent, FullCalendarModule } from '@fullcalendar/angular';
 
 import { Component, ViewChild } from '@angular/core';
 import { EventInput, CalendarOptions, DateSelectArg, EventClickArg } from '@fullcalendar/core';
+import esLocale from '@fullcalendar/core/locales/es';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import { ModalComponent } from '../../shared/components/ui/modal/modal.component';
 import { AlertComponent } from '../../shared/components/ui/alert/alert.component';
+import { NotificationService } from '../../shared/services/notification.service';
 
 interface Employee {
   id: number;
@@ -34,6 +36,19 @@ interface AlertItem {
   message: string;
 }
 
+interface VacationRequest {
+  id: number;
+  employeeId: number;
+  employeeName: string;
+  employeeAvatar: string;
+  startDate: string;
+  endDate: string;
+  type: 'vacation' | 'day-off';
+  reason: string;
+  status: 'pending' | 'approved' | 'rejected';
+  requestDate: string;
+}
+
 interface CalendarEvent extends EventInput {
   extendedProps: {
     calendar: string;
@@ -44,12 +59,15 @@ interface CalendarEvent extends EventInput {
     employeeColor?: string;
     startTime?: string;
     endTime?: string;
+    isVacation?: boolean;
+    vacationType?: 'vacation' | 'day-off';
   };
 }
 
 @Component({
   selector: 'app-calender',
   imports: [
+    CommonModule,
     FormsModule,
     KeyValuePipe,
     FullCalendarModule,
@@ -163,6 +181,11 @@ export class CalenderComponent {
   eventEndTime = '17:00';
   isOpen = false;
 
+  // Control de conflictos
+  conflictEvent: any = null;
+  showConflictModal = false;
+  pendingEventData: any = null;
+
   // Filtro de empleado
   selectedEmployeeFilter: number | 'all' = 'all';
 
@@ -178,10 +201,31 @@ export class CalenderComponent {
     employeeColor?: string;
     startTime?: string;
     endTime?: string;
+    isVacation?: boolean;
+    vacationType?: 'vacation' | 'day-off';
   }> = [];
 
   alerts: AlertItem[] = [];
   private alertId = 0;
+
+  // Sistema de vacaciones
+  vacationRequests: VacationRequest[] = [];
+  isVacationModalOpen = false;
+  isVacationManagementOpen = false;
+  vacationStartDate = '';
+  vacationEndDate = '';
+  vacationType: 'vacation' | 'day-off' = 'vacation';
+  vacationReason = '';
+  currentUser: Employee | null = null; // Simular usuario actual
+
+  // Calendario personalizado
+  showStartDatePicker = false;
+  showEndDatePicker = false;
+  calendarMonth = new Date().getMonth();
+  calendarYear = new Date().getFullYear();
+  calendarDays: (number | null)[] = [];
+  monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
+                'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
   locations: Location[] = [
     { id: 1, name: 'Sede Central', address: 'Av. Principal 123', city: 'Madrid', phone: '+34 910 000 001' },
@@ -225,7 +269,56 @@ export class CalenderComponent {
 
   calendarOptions!: CalendarOptions;
 
+  constructor(private notificationService: NotificationService) {}
+
   ngOnInit() {
+    // Simular usuario actual (Ana García como administradora)
+    this.currentUser = this.employees[0];
+
+    // Inicializar solicitudes de vacaciones de ejemplo
+    this.vacationRequests = [
+      {
+        id: 1,
+        employeeId: 2,
+        employeeName: 'Luis Pérez',
+        employeeAvatar: '/images/user/user-02.png',
+        startDate: '2026-01-20',
+        endDate: '2026-01-24',
+        type: 'vacation',
+        reason: 'Vacaciones de invierno',
+        status: 'pending',
+        requestDate: '2026-01-10'
+      },
+      {
+        id: 2,
+        employeeId: 3,
+        employeeName: 'María López',
+        employeeAvatar: '/images/user/user-03.png',
+        startDate: '2026-01-18',
+        endDate: '2026-01-18',
+        type: 'day-off',
+        reason: 'Asuntos personales',
+        status: 'approved',
+        requestDate: '2026-01-12'
+      }
+    ];
+
+    // Agregar notificaciones de ejemplo para demostrar el sistema
+    // Si hay solicitudes pendientes, notificar al admin
+    const pendingRequests = this.vacationRequests.filter(r => r.status === 'pending');
+    if (this.isAdmin && pendingRequests.length > 0) {
+      pendingRequests.forEach(request => {
+        this.notificationService.addNotification({
+          type: 'vacation-request',
+          title: 'Nueva solicitud de vacaciones',
+          message: `${request.employeeName} ha solicitado ${request.type === 'vacation' ? 'vacaciones' : 'un día libre'} del ${this.formatDate(request.startDate)} al ${this.formatDate(request.endDate)}`,
+          avatar: request.employeeAvatar,
+          employeeName: request.employeeName,
+          data: { requestId: request.id }
+        });
+      });
+    }
+
     const today = new Date().toISOString().split('T')[0];
     const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
     const twoDays = new Date(Date.now() + 172800000).toISOString().split('T')[0];
@@ -456,14 +549,25 @@ export class CalenderComponent {
       }
     ];
 
+    // Agregar vacaciones aprobadas al calendario
+    this.addApprovedVacationsToCalendar();
+
     // Guardamos copia completa para filtrar por empleado
     this.allEvents = [...this.events];
+
+    // Personalización de localización con meses en mayúscula
+    const esLocaleCustom = {
+      ...esLocale,
+      monthNames: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'],
+      monthNamesShort: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'],
+    };
 
     this.calendarOptions = {
       plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
       initialView: 'dayGridMonth',
+      locale: esLocaleCustom,
       headerToolbar: {
-        left: 'prev,next',
+        left: 'prev,next today',
         center: 'title',
         right: 'dayGridMonth,timeGridWeek,timeGridDay'
       },
@@ -494,6 +598,11 @@ export class CalenderComponent {
 
   handleEventClick(clickInfo: EventClickArg) {
     const event = clickInfo.event as any;
+
+    // Si es una vacación, no permitir edición (solo desde gestión de solicitudes)
+    if (event.extendedProps['isVacation']) {
+      return;
+    }
 
     // Si el día tiene más de 3 tareas, abrimos el modal de lista en vez de editar individual
     const dayStr = this.formatLocalDate(event.start);
@@ -542,6 +651,37 @@ export class CalenderComponent {
       return;
     }
 
+    // Validar que el empleado no esté de vacaciones
+    if (this.isEmployeeOnVacation(this.eventEmployeeId, this.eventStartDate)) {
+      this.showAlert('error', 'Empleado de vacaciones', 'No se puede asignar una tarea a un empleado que está de vacaciones en esa fecha');
+      return;
+    }
+
+    // Detectar conflictos de horarios
+    const conflict = this.detectTimeConflict();
+    if (conflict) {
+      this.conflictEvent = conflict;
+      this.pendingEventData = {
+        employeeId: this.eventEmployeeId,
+        location: this.eventLocation,
+        startDate: this.eventStartDate,
+        endDate: this.eventEndDate,
+        startTime: this.eventStartTime,
+        endTime: this.eventEndTime,
+        isUpdate: !!this.selectedEvent
+      };
+
+      this.showConflictModal = true;
+      return;
+    }
+
+    // Proceder con la creación/actualización del evento
+    this.proceedWithEventCreation();
+  }
+
+  proceedWithEventCreation() {
+    this.showConflictModal = false;
+    
     const employee = this.eventEmployeeId ? this.employees.find(e => e.id === this.eventEmployeeId) : null;
     const location = this.eventLocation ? this.locations.find(l => l.name === this.eventLocation) : null;
 
@@ -613,10 +753,29 @@ export class CalenderComponent {
       };
       this.allEvents = [...this.allEvents, newEvent];
       this.applyEmployeeFilter();
+
+      // Enviar notificación al empleado asignado
+      if (employee && this.currentUser && employee.id !== this.currentUser.id) {
+        this.notificationService.addNotification({
+          type: 'task',
+          title: `Nueva tarea asignada`,
+          message: `${this.currentUser.name} te ha asignado una tarea: "${generatedTitle}"`,
+          avatar: this.currentUser.avatar,
+          employeeName: this.currentUser.name,
+          data: { eventId: newEvent.id }
+        });
+      }
     }
 
     this.closeModal();
     this.resetModalFields();
+    this.showAlert('success', 'Tarea creada', 'La tarea se ha registrado correctamente');
+  }
+
+  rejectEventCreation() {
+    this.showConflictModal = false;
+    this.conflictEvent = null;
+    this.pendingEventData = null;
   }
 
   private applyEmployeeFilter() {
@@ -650,6 +809,8 @@ export class CalenderComponent {
       employeeColor: ev.extendedProps['employeeColor'],
       startTime: ev.extendedProps['startTime'],
       endTime: ev.extendedProps['endTime'],
+      isVacation: ev.extendedProps['isVacation'] || false,
+      vacationType: ev.extendedProps['vacationType'],
     }));
 
     this.isDayModalOpen = true;
@@ -659,6 +820,11 @@ export class CalenderComponent {
     const calendarApi = this.calendarComponent.getApi();
     const ev = calendarApi.getEventById(eventId);
     if (!ev) return;
+
+    // No permitir editar vacaciones
+    if (ev.extendedProps['isVacation']) {
+      return;
+    }
 
     this.selectedEvent = {
       id: ev.id,
@@ -692,7 +858,14 @@ export class CalenderComponent {
   handleDayEventDelete(eventId: string) {
     const calendarApi = this.calendarComponent.getApi();
     const ev = calendarApi.getEventById(eventId);
-    if (ev) ev.remove();
+    if (!ev) return;
+
+    // No permitir eliminar vacaciones
+    if (ev.extendedProps['isVacation']) {
+      return;
+    }
+
+    ev.remove();
     this.events = this.events.filter(e => e.id !== eventId);
     if (this.selectedDay) {
       this.openDayEventsModal(this.selectedDay);
@@ -759,7 +932,24 @@ export class CalenderComponent {
     const endTime = eventInfo.event.extendedProps.endTime;
     const timeText = startTime && endTime ? `${startTime}-${endTime}` : '';
     const bgColor = eventInfo.event.backgroundColor || '#6366f1';
+    const isVacation = eventInfo.event.extendedProps.isVacation;
+    const vacationType = eventInfo.event.extendedProps.vacationType;
 
+    // Renderizado especial para vacaciones
+    if (isVacation) {
+      const icon = vacationType === 'vacation' ? '🏖️' : '📅';
+      return {
+        html: `
+          <div class="flex items-center justify-center gap-1 p-2 text-xs font-bold" style="background-color: ${bgColor}; border-radius: 4px; color: white;">
+            <span style="font-size: 16px;">${icon}</span>
+            ${avatar ? `<img src="${avatar}" alt="${employeeName}" class="w-4 h-4 rounded-full object-cover flex-shrink-0" referrerpolicy="no-referrer" />` : ''}
+            <span class="truncate">${eventInfo.event.title}</span>
+          </div>
+        `
+      };
+    }
+
+    // Renderizado normal para tareas
     return {
       html: `
         <div class="flex flex-col gap-0.5 p-1 text-xs" style="background-color: ${bgColor}; border-radius: 4px; color: white;">
@@ -774,6 +964,47 @@ export class CalenderComponent {
     };
   }
 
+  // Detectar conflictos de horarios
+  private detectTimeConflict(): any {
+    if (!this.eventEmployeeId || !this.eventStartDate) {
+      return null;
+    }
+
+    const newEventStart = this.timeStringToMinutes(this.eventStartTime);
+    const newEventEnd = this.timeStringToMinutes(this.eventEndTime);
+    const newEventDate = this.eventStartDate;
+
+    // Buscar eventos del mismo empleado en el mismo día
+    const conflictingEvent = this.allEvents.find(event => {
+      if (event.id === this.selectedEvent?.id) {
+        return false; // Ignorar el evento actual si lo estamos editando
+      }
+
+      if (event.extendedProps.employeeId !== this.eventEmployeeId) {
+        return false; // Diferente empleado
+      }
+
+      const eventDate = this.formatLocalDate(new Date(event.start as string));
+      if (eventDate !== newEventDate) {
+        return false; // Diferente día
+      }
+
+      // Comparar rangos de horas
+      const existingStart = this.timeStringToMinutes(event.extendedProps.startTime || '09:00');
+      const existingEnd = this.timeStringToMinutes(event.extendedProps.endTime || '17:00');
+
+      // Hay conflicto si los rangos se solapan
+      return !(newEventEnd <= existingStart || newEventStart >= existingEnd);
+    });
+
+    return conflictingEvent || null;
+  }
+
+  private timeStringToMinutes(timeStr: string): number {
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    return hours * 60 + minutes;
+  }
+
   private showAlert(variant: AlertItem['variant'], title: string, message: string) {
     const id = ++this.alertId;
     this.alerts = [...this.alerts, { id, variant, title, message }];
@@ -784,4 +1015,399 @@ export class CalenderComponent {
   dismissAlert(id: number) {
     this.alerts = this.alerts.filter(alert => alert.id !== id);
   }
+
+  exportToGoogleCalendar() {
+    // Generar archivo .ics (iCalendar) que se puede importar a Google Calendar
+    let icsContent = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//Gestor Trabajos//ES',
+      'CALSCALE:GREGORIAN',
+      'METHOD:PUBLISH',
+      'X-WR-CALNAME:Calendario de Trabajos',
+      'X-WR-TIMEZONE:Europe/Madrid'
+    ];
+
+    // Agregar cada evento del calendario actual
+    this.events.forEach(event => {
+      const startDate = new Date(event.start as string);
+      const endDate = event.end ? new Date(event.end as string) : new Date(startDate.getTime() + 3600000); // 1 hora por defecto
+
+      // Formatear fechas en formato iCalendar (YYYYMMDDTHHMMSS)
+      const formatDate = (date: Date) => {
+        return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+      };
+
+      icsContent.push('BEGIN:VEVENT');
+      icsContent.push(`DTSTART:${formatDate(startDate)}`);
+      icsContent.push(`DTEND:${formatDate(endDate)}`);
+      icsContent.push(`SUMMARY:${event.title || 'Tarea'}`);
+      
+      if (event.extendedProps.location) {
+        icsContent.push(`LOCATION:${event.extendedProps.location}`);
+      }
+      
+      if (event.extendedProps.employeeName) {
+        const description = `Empleado: ${event.extendedProps.employeeName}\\nLocalización: ${event.extendedProps.location || 'N/A'}`;
+        icsContent.push(`DESCRIPTION:${description}`);
+      }
+      
+      icsContent.push(`UID:${event.id}@gestortrabajos.com`);
+      icsContent.push(`DTSTAMP:${formatDate(new Date())}`);
+      icsContent.push('END:VEVENT');
+    });
+
+    icsContent.push('END:VCALENDAR');
+
+    // Crear archivo y descargar
+    const blob = new Blob([icsContent.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
+    const link = document.createElement('a');
+    link.href = window.URL.createObjectURL(blob);
+    link.download = `calendario-trabajos-${new Date().toISOString().split('T')[0]}.ics`;
+    link.click();
+    window.URL.revokeObjectURL(link.href);
+
+    this.showAlert('success', 'Exportación exitosa', 'El archivo .ics ha sido descargado. Puedes importarlo a Google Calendar desde la opción "Importar".');
+  }
+
+  // ========== SISTEMA DE VACACIONES ==========
+
+  openVacationModal() {
+    this.vacationStartDate = '';
+    this.vacationEndDate = '';
+    this.vacationType = 'vacation';
+    this.vacationReason = '';
+    this.isVacationModalOpen = true;
+  }
+
+  closeVacationModal() {
+    this.isVacationModalOpen = false;
+  }
+
+  openVacationManagement() {
+    this.isVacationManagementOpen = true;
+  }
+
+  closeVacationManagement() {
+    this.isVacationManagementOpen = false;
+  }
+
+  submitVacationRequest() {
+    if (!this.vacationStartDate || !this.vacationEndDate || !this.vacationReason.trim()) {
+      this.showAlert('warning', 'Campos incompletos', 'Debes completar todos los campos para solicitar vacaciones');
+      return;
+    }
+
+    if (!this.currentUser) return;
+
+    const newRequest: VacationRequest = {
+      id: this.vacationRequests.length + 1,
+      employeeId: this.currentUser.id,
+      employeeName: this.currentUser.name,
+      employeeAvatar: this.currentUser.avatar,
+      startDate: this.vacationStartDate,
+      endDate: this.vacationEndDate,
+      type: this.vacationType,
+      reason: this.vacationReason,
+      status: 'pending',
+      requestDate: new Date().toISOString().split('T')[0]
+    };
+
+    this.vacationRequests = [...this.vacationRequests, newRequest];
+    
+    // Enviar notificación a todos los administradores
+    if (this.currentUser) {
+      const admins = this.employees.filter(emp => emp.rol === 'Administrador');
+      admins.forEach(admin => {
+        this.notificationService.addNotification({
+          type: 'vacation-request',
+          title: 'Nueva solicitud de vacaciones',
+          message: `${this.currentUser!.name} ha solicitado ${this.vacationType === 'vacation' ? 'vacaciones' : 'un día libre'} del ${this.formatDate(this.vacationStartDate)} al ${this.formatDate(this.vacationEndDate)}`,
+          avatar: this.currentUser!.avatar,
+          employeeName: this.currentUser!.name,
+          data: { requestId: newRequest.id }
+        });
+      });
+    }
+    
+    this.showAlert('success', 'Solicitud enviada', 'Tu solicitud de vacaciones ha sido enviada al administrador');
+    this.closeVacationModal();
+  }
+
+  approveVacationRequest(requestId: number) {
+    const request = this.vacationRequests.find(r => r.id === requestId);
+    if (!request) return;
+
+    request.status = 'approved';
+    this.addVacationToCalendar(request);
+    
+    // Notificar al empleado
+    if (this.currentUser) {
+      this.notificationService.addNotification({
+        type: 'vacation-request',
+        title: 'Solicitud aprobada',
+        message: `Tu solicitud de ${request.type === 'vacation' ? 'vacaciones' : 'día libre'} del ${this.formatDate(request.startDate)} al ${this.formatDate(request.endDate)} ha sido aprobada`,
+        avatar: this.currentUser.avatar,
+        employeeName: 'Administrador',
+        data: { requestId: request.id }
+      });
+    }
+    
+    this.showAlert('success', 'Solicitud aprobada', `La solicitud de ${request.employeeName} ha sido aprobada`);
+  }
+
+  rejectVacationRequest(requestId: number) {
+    const request = this.vacationRequests.find(r => r.id === requestId);
+    if (!request) return;
+
+    request.status = 'rejected';
+    
+    // Notificar al empleado
+    if (this.currentUser) {
+      this.notificationService.addNotification({
+        type: 'vacation-request',
+        title: 'Solicitud rechazada',
+        message: `Tu solicitud de ${request.type === 'vacation' ? 'vacaciones' : 'día libre'} del ${this.formatDate(request.startDate)} al ${this.formatDate(request.endDate)} ha sido rechazada`,
+        avatar: this.currentUser.avatar,
+        employeeName: 'Administrador',
+        data: { requestId: request.id }
+      });
+    }
+    
+    this.showAlert('info', 'Solicitud rechazada', `La solicitud de ${request.employeeName} ha sido rechazada`);
+  }
+
+  deleteVacationRequest(requestId: number) {
+    const request = this.vacationRequests.find(r => r.id === requestId);
+    if (!request) return;
+
+    // Eliminar del calendario si estaba aprobada
+    if (request.status === 'approved') {
+      this.removeVacationFromCalendar(request);
+    }
+
+    this.vacationRequests = this.vacationRequests.filter(r => r.id !== requestId);
+    this.showAlert('info', 'Solicitud eliminada', 'La solicitud ha sido eliminada');
+  }
+
+  private addApprovedVacationsToCalendar() {
+    const approvedRequests = this.vacationRequests.filter(r => r.status === 'approved');
+    approvedRequests.forEach(request => {
+      this.addVacationToCalendar(request);
+    });
+  }
+
+  private addVacationToCalendar(request: VacationRequest) {
+    const employee = this.employees.find(e => e.id === request.employeeId);
+    const vacationColor = request.type === 'vacation' ? '#9333ea' : '#ec4899'; // Púrpura para vacaciones, rosa para días libres
+    const title = request.type === 'vacation' ? `🏖️ Vacaciones - ${request.employeeName}` : `📅 Día Libre - ${request.employeeName}`;
+
+    // Para eventos de día completo (allDay: true), FullCalendar espera que end sea el día siguiente al último día
+    // Si las vacaciones son del 20 al 24, end debe ser el 25 para que muestre hasta el 24 inclusive
+    const vacationEvent: CalendarEvent = {
+      id: `vacation-${request.id}`,
+      title,
+      start: request.startDate,
+      end: this.addDays(request.endDate, 1), // Sumamos 1 día porque FullCalendar usa fechas exclusivas para eventos allDay
+      backgroundColor: vacationColor,
+      borderColor: vacationColor,
+      allDay: true,
+      extendedProps: {
+        calendar: 'Vacation',
+        employeeId: request.employeeId,
+        employeeName: request.employeeName,
+        employeeAvatar: request.employeeAvatar,
+        employeeColor: employee?.color,
+        isVacation: true,
+        vacationType: request.type
+      }
+    };
+
+    this.allEvents = [...this.allEvents, vacationEvent];
+    this.applyEmployeeFilter();
+  }
+
+  private removeVacationFromCalendar(request: VacationRequest) {
+    this.allEvents = this.allEvents.filter(e => e.id !== `vacation-${request.id}`);
+    this.applyEmployeeFilter();
+  }
+
+  private addDays(dateStr: string, days: number): string {
+    const date = new Date(dateStr);
+    date.setDate(date.getDate() + days);
+    return date.toISOString().split('T')[0];
+  }
+
+  private isEmployeeOnVacation(employeeId: number, date: string): boolean {
+    const approvedVacations = this.vacationRequests.filter(
+      r => r.status === 'approved' && r.employeeId === employeeId
+    );
+
+    return approvedVacations.some(vacation => {
+      const start = new Date(vacation.startDate);
+      const end = new Date(vacation.endDate);
+      const checkDate = new Date(date);
+      return checkDate >= start && checkDate <= end;
+    });
+  }
+
+  getPendingRequestsCount(): number {
+    return this.vacationRequests.filter(r => r.status === 'pending').length;
+  }
+
+  get isAdmin(): boolean {
+    return this.currentUser?.rol === 'Administrador';
+  }
+
+  private formatDate(dateStr: string): string {
+    const date = new Date(dateStr);
+    const options: Intl.DateTimeFormatOptions = { day: '2-digit', month: 'long', year: 'numeric' };
+    return date.toLocaleDateString('es-ES', options);
+  }
+
+  isEmployeeAvailable(employeeId: number): boolean {
+    // Si no hay fecha seleccionada, permitir todos
+    if (!this.eventStartDate) return true;
+    
+    // Verificar si el empleado está de vacaciones ese día
+    return !this.isEmployeeOnVacation(employeeId, this.eventStartDate);
+  }
+
+  getEmployeeVacationInfo(employeeId: number): string {
+    if (!this.eventStartDate) return '';
+    
+    const approvedVacations = this.vacationRequests.filter(
+      r => r.status === 'approved' && r.employeeId === employeeId
+    );
+
+    for (const vacation of approvedVacations) {
+      const start = new Date(vacation.startDate);
+      const end = new Date(vacation.endDate);
+      const checkDate = new Date(this.eventStartDate);
+      
+      if (checkDate >= start && checkDate <= end) {
+        return vacation.type === 'vacation' 
+          ? '🏖️ De vacaciones' 
+          : '📅 Día libre';
+      }
+    }
+    
+    return '';
+  }
+
+  onDateChange() {
+    // Si hay un empleado seleccionado, verificar si sigue disponible en la nueva fecha
+    if (this.eventEmployeeId && !this.isEmployeeAvailable(this.eventEmployeeId)) {
+      const employeeName = this.employees.find(e => e.id === this.eventEmployeeId)?.name;
+      this.showAlert(
+        'warning', 
+        'Empleado no disponible', 
+        `${employeeName} no está disponible en esta fecha. Por favor, selecciona otro empleado.`
+      );
+      this.eventEmployeeId = undefined;
+    }
+  }
+
+  // Métodos del calendario personalizado
+  openStartDatePicker() {
+    this.showStartDatePicker = true;
+    this.showEndDatePicker = false;
+    this.generateCalendar();
+  }
+
+  openEndDatePicker() {
+    this.showEndDatePicker = true;
+    this.showStartDatePicker = false;
+    this.generateCalendar();
+  }
+
+  closeCalendarPickers() {
+    this.showStartDatePicker = false;
+    this.showEndDatePicker = false;
+  }
+
+  generateCalendar() {
+    const firstDay = new Date(this.calendarYear, this.calendarMonth, 1).getDay();
+    const daysInMonth = new Date(this.calendarYear, this.calendarMonth + 1, 0).getDate();
+    
+    this.calendarDays = [];
+    
+    // Ajustar para que el lunes sea el primer día (0 = domingo -> queremos 1 = lunes)
+    const adjustedFirstDay = firstDay === 0 ? 6 : firstDay - 1;
+    
+    // Agregar días vacíos antes del primer día del mes
+    for (let i = 0; i < adjustedFirstDay; i++) {
+      this.calendarDays.push(null);
+    }
+    
+    // Agregar todos los días del mes
+    for (let day = 1; day <= daysInMonth; day++) {
+      this.calendarDays.push(day);
+    }
+  }
+
+  previousMonth() {
+    if (this.calendarMonth === 0) {
+      this.calendarMonth = 11;
+      this.calendarYear--;
+    } else {
+      this.calendarMonth--;
+    }
+    this.generateCalendar();
+  }
+
+  nextMonth() {
+    if (this.calendarMonth === 11) {
+      this.calendarMonth = 0;
+      this.calendarYear++;
+    } else {
+      this.calendarMonth++;
+    }
+    this.generateCalendar();
+  }
+
+  selectDate(day: number | null, isStartDate: boolean) {
+    if (day === null) return;
+    
+    // Formatear la fecha manualmente para evitar problemas de zona horaria
+    const year = this.calendarYear;
+    const month = String(this.calendarMonth + 1).padStart(2, '0');
+    const dayStr = String(day).padStart(2, '0');
+    const formattedDate = `${year}-${month}-${dayStr}`;
+    
+    if (isStartDate) {
+      this.vacationStartDate = formattedDate;
+      this.showStartDatePicker = false;
+    } else {
+      this.vacationEndDate = formattedDate;
+      this.showEndDatePicker = false;
+    }
+  }
+
+  formatDisplayDate(dateStr: string): string {
+    if (!dateStr) return 'Seleccionar fecha';
+    
+    // Parsear la fecha directamente del string YYYY-MM-DD para evitar problemas de zona horaria
+    const [year, month, day] = dateStr.split('-').map(Number);
+    return `${day} de ${this.monthNames[month - 1]} de ${year}`;
+  }
+
+  isSelectedDate(day: number | null, dateStr: string): boolean {
+    if (day === null || !dateStr) return false;
+    
+    // Comparar directamente los componentes de la fecha
+    const [year, month, dayOfMonth] = dateStr.split('-').map(Number);
+    return this.calendarYear === year && 
+           this.calendarMonth === (month - 1) && 
+           day === dayOfMonth;
+  }
+
+  isToday(day: number | null): boolean {
+    if (day === null) return false;
+    const today = new Date();
+    return day === today.getDate() && 
+           this.calendarMonth === today.getMonth() && 
+           this.calendarYear === today.getFullYear();
+  }
 }
+

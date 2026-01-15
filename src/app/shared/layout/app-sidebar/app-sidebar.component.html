@@ -19,10 +19,9 @@
   >
     <a routerLink="/">
       @if ((isExpanded$ | async) || (isHovered$ | async) || (isMobileOpen$ | async)) {
-        <img class="dark:hidden" src="/images/logo/logo.svg" alt="Logo" width="150" height="40" />
-        <img class="hidden dark:block" src="/images/logo/logo-dark.svg" alt="Logo" width="150" height="40" />
+        <span class="text-lg font-bold text-gray-900 dark:text-white whitespace-nowrap">Gestor de trabajos</span>
       } @else {
-        <img src="/images/logo/logo-icon.svg" alt="Logo" width="32" height="32" />
+        <span class="text-xs font-bold text-gray-900 dark:text-white">GT</span>
       }
     </a>
   </div>
@@ -39,7 +38,7 @@
             }"
           >
             @if ((isExpanded$ | async) || (isHovered$ | async) || (isMobileOpen$ | async)) {
-              Menu
+              Menú
             } @else {
               <svg
                 width="1em"
@@ -92,7 +91,7 @@
                           'menu-dropdown-badge-inactive': openSubmenu !== 'main-' + i
                         }"
                       >
-                        new
+                        nuevo
                       </span>
                     }
 
@@ -148,7 +147,7 @@
                                     'menu-dropdown-badge-inactive': !isActive(subItem.path)
                                   }"
                                 >
-                                  new
+                                  nuevo
                                 </span>
                               }
                               @if (subItem.pro) {
@@ -173,6 +172,7 @@
                     <a
                       [routerLink]="nav.path"
                       routerLinkActive="menu-item-active"
+                      [routerLinkActiveOptions]="{ exact: true }"
                       class="menu-item group"
                       [ngClass]="{ 'menu-item-inactive': !isActive(nav.path) }"
                     >

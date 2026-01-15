@@ -2,7 +2,7 @@
   <div class="flex flex-col gap-4 px-6 mb-4 sm:flex-row sm:items-center sm:justify-between">
     <div>
       <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">
-        Recent Orders
+        Órdenes Recientes
       </h3>
     </div>
     <div class="flex items-center gap-3">
@@ -21,23 +21,16 @@
       <thead class="px-6 py-3.5 border-t border-gray-100 border-y bg-gray-50 dark:border-white/[0.05] dark:bg-gray-900">
         <tr>
           <th class="px-6 py-3 font-medium text-gray-500 sm:px-6 text-theme-xs dark:text-gray-400 text-start">
-            <div class="flex items-center gap-3">
-              <div>
-                <app-checkbox [checked]="selectAll" (checkedChange)="handleSelectAll()"/>
-              </div>
-              <div>
-                <span class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">
-                  Deal ID
-                </span>
-              </div>
-            </div>
+            <span class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">
+              Deal ID
+            </span>
           </th>
-          <th class="px-6 py-3 font-medium text-gray-500 sm:px-6 text-theme-xs dark:text-gray-400 text-start">Customer</th>
-          <th class="px-6 py-3 font-medium text-gray-500 sm:px-6 text-theme-xs dark:text-gray-400 text-start">Product/Service</th>
-          <th class="px-6 py-3 font-medium text-gray-500 sm:px-6 text-theme-xs dark:text-gray-400 text-start">Deal Value</th>
-          <th class="px-6 py-3 font-medium text-gray-500 sm:px-6 text-theme-xs dark:text-gray-400 text-start">Close Date</th>
-          <th class="px-6 py-3 font-medium text-gray-500 sm:px-6 text-theme-xs dark:text-gray-400 text-start">Status</th>
-          <th class="px-6 py-3 font-medium text-gray-500 sm:px-6 text-theme-xs dark:text-gray-400 text-start">Action</th>
+          <th class="px-6 py-3 font-medium text-gray-500 sm:px-6 text-theme-xs dark:text-gray-400 text-start">Cliente</th>
+          <th class="px-6 py-3 font-medium text-gray-500 sm:px-6 text-theme-xs dark:text-gray-400 text-start">Producto/Servicio</th>
+          <th class="px-6 py-3 font-medium text-gray-500 sm:px-6 text-theme-xs dark:text-gray-400 text-start">Valor del Trato</th>
+          <th class="px-6 py-3 font-medium text-gray-500 sm:px-6 text-theme-xs dark:text-gray-400 text-start">Fecha de Cierre</th>
+          <th class="px-6 py-3 font-medium text-gray-500 sm:px-6 text-theme-xs dark:text-gray-400 text-start">Estado</th>
+          <th class="px-6 py-3 font-medium text-gray-500 sm:px-6 text-theme-xs dark:text-gray-400 text-start">Acción</th>
         </tr>
       </thead>
       <tbody>
@@ -45,12 +38,6 @@
         <tr>
           <td class="px-4 sm:px-6 py-3.5">
             <div class="flex items-center gap-3">
-              <div>
-                <app-checkbox
-                  [checked]="selectedRows.includes(row.id)"
-                  (checkedChange)="handleRowSelect(row.id)"
-                />
-              </div>
               <div>
                 <span class="block font-medium text-gray-700 text-theme-sm dark:text-gray-400">
                   {{ row.id }}

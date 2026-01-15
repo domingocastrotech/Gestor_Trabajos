@@ -1,17 +1,66 @@
 <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
   <div class="flex flex-col gap-4 p-4">
-    <div class="flex flex-wrap items-center gap-3">
-      <label class="text-sm font-medium text-gray-700 dark:text-gray-200" for="employee-filter">Empleado:</label>
-      <select
-        id="employee-filter"
-        class="h-10 min-w-[200px] rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
-        (change)="handleEmployeeFilterChange($any($event.target).value || 'all')"
-      >
-        <option value="all">Todos los empleados</option>
-        @for (employee of employees; track employee.id) {
-          <option [value]="employee.id">{{ employee.name }}</option>
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <div class="flex flex-wrap items-center gap-3">
+        <label class="text-sm font-medium text-gray-700 dark:text-gray-200" for="employee-filter">Empleado:</label>
+        <select
+          id="employee-filter"
+          class="h-10 min-w-[200px] rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+          (change)="handleEmployeeFilterChange($any($event.target).value || 'all')"
+        >
+          <option value="all">Todos los empleados</option>
+          @for (employee of employees; track employee.id) {
+            <option [value]="employee.id">{{ employee.name }}</option>
+          }
+        </select>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          (click)="openVacationModal()"
+          class="flex items-center gap-2 h-10 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:hover:bg-gray-800"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="16" y1="2" x2="16" y2="6"></line>
+            <line x1="8" y1="2" x2="8" y2="6"></line>
+            <line x1="3" y1="10" x2="21" y2="10"></line>
+          </svg>
+          Solicitar Vacaciones
+        </button>
+        @if (isAdmin) {
+          <button
+            type="button"
+            (click)="openVacationManagement()"
+            class="flex items-center gap-2 h-10 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:hover:bg-gray-800"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="8.5" cy="7" r="4"></circle>
+              <polyline points="17 11 19 13 23 9"></polyline>
+            </svg>
+            Gestionar Solicitudes
+            @if (getPendingRequestsCount() > 0) {
+              <span class="flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-red-500 rounded-full">
+                {{ getPendingRequestsCount() }}
+              </span>
+            }
+          </button>
         }
-      </select>
+        <button
+          type="button"
+          (click)="exportToGoogleCalendar()"
+          class="flex items-center gap-2 h-10 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:hover:bg-gray-800"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="16" y1="2" x2="16" y2="6"></line>
+            <line x1="8" y1="2" x2="8" y2="6"></line>
+            <line x1="3" y1="10" x2="21" y2="10"></line>
+          </svg>
+          Exportar Calendar
+        </button>
+      </div>
     </div>
 
     <div class="custom-calendar">
@@ -70,16 +119,17 @@
       </div>
 
 
-      <!-- Enter Start Date - Hidden (obtained from calendar click) -->
+      <!-- Fecha de la Tarea - Hidden (se obtiene del click en el calendario) -->
       <div class="mt-6 hidden">
         <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-          Enter Start Date
+          Fecha de la Tarea
         </label>
         <input
           id="event-start-date"
           type="date"
           [(ngModel)]="eventStartDate"
-          class="dark:bg-dark-900 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+          (ngModelChange)="onDateChange()"
+          class="h-11 w-full rounded-lg border border-gray-300 bg-white dark:bg-gray-900 px-4 py-2.5 text-sm text-gray-800 dark:text-white shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700"
         />
       </div>
 
@@ -108,9 +158,23 @@
         >
           <option [ngValue]="undefined">Seleccionar empleado</option>
           @for (employee of employees; track employee.id) {
-            <option [ngValue]="employee.id">{{ employee.name }} ({{ employee.rol }})</option>
+            <option 
+              [ngValue]="employee.id" 
+              [disabled]="!isEmployeeAvailable(employee.id)"
+              [class.text-gray-400]="!isEmployeeAvailable(employee.id)"
+            >
+              {{ employee.name }} ({{ employee.rol }})
+              @if (!isEmployeeAvailable(employee.id)) {
+                - {{ getEmployeeVacationInfo(employee.id) }}
+              }
+            </option>
           }
         </select>
+        @if (eventEmployeeId && !isEmployeeAvailable(eventEmployeeId)) {
+          <p class="mt-2 text-sm text-orange-600 dark:text-orange-400">
+            ⚠️ Este empleado no está disponible en la fecha seleccionada
+          </p>
+        }
       </div>
 
       <div class="grid grid-cols-2 gap-4 mt-6">
@@ -143,14 +207,14 @@
           type="button"
           class="flex w-full justify-center rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 sm:w-auto"
         >
-          Close
+          Cerrar
         </button>
         <button
           (click)="handleAddOrUpdateEvent()"
           type="button"
           class="btn btn-success btn-update-event flex w-full justify-center rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-600 sm:w-auto"
         >
-          {{ selectedEvent ? 'Update Changes' : 'Add Event' }}
+          {{ selectedEvent ? 'Actualizar cambios' : 'Añadir evento' }}
         </button>
       </div>
     </div>
@@ -189,25 +253,35 @@
                 </div>
                 <div class="flex flex-col text-sm">
                   <span class="font-semibold text-gray-800 dark:text-white/90">{{ ev.employeeName || 'Tarea' }}</span>
-                  <span class="text-gray-600 dark:text-gray-300">{{ ev.location || 'Sin localización' }}</span>
-                  <span class="text-gray-500 dark:text-gray-400">{{ ev.startTime && ev.endTime ? ev.startTime + ' - ' + ev.endTime : '' }}</span>
+                  @if (ev.isVacation) {
+                    <span class="text-gray-600 dark:text-gray-300">{{ ev.vacationType === 'vacation' ? '🏖️ Vacaciones' : '📅 Día Libre' }}</span>
+                  } @else {
+                    <span class="text-gray-600 dark:text-gray-300">{{ ev.location || 'Sin localización' }}</span>
+                    <span class="text-gray-500 dark:text-gray-400">{{ ev.startTime && ev.endTime ? ev.startTime + ' - ' + ev.endTime : '' }}</span>
+                  }
                 </div>
               </div>
               <div class="flex items-center gap-2">
-                <button
-                  type="button"
-                  class="rounded-md border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200"
-                  (click)="handleDayEventEdit(ev.id)"
-                >
-                  Editar
-                </button>
-                <button
-                  type="button"
-                  class="rounded-md border border-red-200 px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-50 dark:border-red-800"
-                  (click)="handleDayEventDelete(ev.id)"
-                >
-                  Eliminar
-                </button>
+                @if (!ev.isVacation) {
+                  <button
+                    type="button"
+                    class="rounded-md border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200"
+                    (click)="handleDayEventEdit(ev.id)"
+                  >
+                    Editar
+                  </button>
+                  <button
+                    type="button"
+                    class="rounded-md border border-red-200 px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-50 dark:border-red-800"
+                    (click)="handleDayEventDelete(ev.id)"
+                  >
+                    Eliminar
+                  </button>
+                } @else {
+                  <span class="text-xs text-gray-500 dark:text-gray-400 italic">
+                    Solo se puede gestionar desde solicitudes
+                  </span>
+                }
               </div>
             </div>
           }
@@ -228,6 +302,360 @@
           (click)="handleDayEventCreate()"
         >
           Nueva tarea en este día
+        </button>
+      </div>
+    </div>
+  </app-modal>
+
+  <!-- Modal de Confirmación de Conflictos -->
+  @if (showConflictModal) {
+    <div class="fixed inset-0 z-[999999] flex items-center justify-center bg-black/50 dark:bg-black/70" (click)="rejectEventCreation()">
+      <div class="rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-6 max-w-md w-full mx-4 shadow-2xl" (click)="$event.stopPropagation()">
+        <div class="flex items-start gap-4">
+          <div class="flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-yellow-100 dark:bg-yellow-900/30">
+            <svg class="h-6 w-6 text-yellow-600 dark:text-yellow-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c.866-1.5 2.926-5.231 2.926-5.231s.584-4.506 3.986-5.021c3.21-.476 4.44.688 5.953 5.237.559 1.501.625 2.738.946 4.284"/>
+            </svg>
+          </div>
+          <div class="flex-1">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">⚠️ Conflicto de horarios</h3>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              Ya existe una tarea asignada al empleado en este rango horario. ¿Deseas crear esta tarea de todas formas?
+            </p>
+            @if (conflictEvent) {
+              <div class="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-3 mb-4 border border-gray-200 dark:border-gray-700">
+                <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Tarea existente:</p>
+                <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  <strong>{{ conflictEvent.extendedProps.employeeName }}</strong>
+                </p>
+                <p class="text-sm text-gray-600 dark:text-gray-400">
+                  📍 {{ conflictEvent.extendedProps.location }}
+                </p>
+                <p class="text-sm text-gray-600 dark:text-gray-400">
+                  🕐 {{ conflictEvent.extendedProps.startTime }} - {{ conflictEvent.extendedProps.endTime }}
+                </p>
+              </div>
+            }
+          </div>
+        </div>
+
+        <div class="flex gap-3 mt-6">
+          <button
+            type="button"
+            (click)="rejectEventCreation()"
+            class="flex-1 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 font-medium text-sm transition"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            (click)="proceedWithEventCreation()"
+            class="flex-1 px-4 py-2 rounded-lg bg-yellow-600 hover:bg-yellow-700 text-white font-medium text-sm transition"
+          >
+            Crear igualmente
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Modal para Solicitar Vacaciones -->
+  <app-modal
+    [isOpen]="isVacationModalOpen"
+    (close)="closeVacationModal()"
+    className="max-w-[600px] p-6 lg:p-8"
+  >
+    <div class="flex flex-col px-2">
+      <h5 class="mb-4 font-semibold text-gray-800 text-theme-xl dark:text-white/90 lg:text-2xl">
+        Solicitar Vacaciones o Día Libre
+      </h5>
+
+      <div class="mt-4">
+        <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
+          Tipo de Solicitud
+        </label>
+        <select
+          [(ngModel)]="vacationType"
+          class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+        >
+          <option value="vacation">🏖️ Vacaciones</option>
+          <option value="day-off">📅 Día Libre</option>
+        </select>
+      </div>
+
+      <div class="mt-4">
+        <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
+          Fecha de Inicio
+        </label>
+        <div class="relative">
+          <button
+            type="button"
+            (click)="openStartDatePicker()"
+            class="h-11 w-full rounded-lg border border-gray-300 bg-white dark:bg-gray-900 px-4 py-2.5 text-sm text-gray-800 dark:text-white shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 cursor-pointer text-left flex items-center justify-between"
+          >
+            <span>{{ formatDisplayDate(vacationStartDate) }}</span>
+            <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+            </svg>
+          </button>
+          
+          @if (showStartDatePicker) {
+            <div class="absolute z-50 mt-2 p-4 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 w-full">
+              <div class="flex items-center justify-between mb-4">
+                <button type="button" (click)="previousMonth()" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                  </svg>
+                </button>
+                <span class="font-semibold text-gray-800 dark:text-white">
+                  {{ monthNames[calendarMonth] }} {{ calendarYear }}
+                </span>
+                <button type="button" (click)="nextMonth()" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                  </svg>
+                </button>
+              </div>
+              
+              <div class="grid grid-cols-7 gap-1 text-center text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">
+                <div>L</div><div>M</div><div>X</div><div>J</div><div>V</div><div>S</div><div>D</div>
+              </div>
+              
+              <div class="grid grid-cols-7 gap-1">
+                @for (day of calendarDays; track $index) {
+                  <button
+                    type="button"
+                    (click)="selectDate(day, true)"
+                    [disabled]="day === null"
+                    [class]="day === null ? 'invisible' : 'h-8 rounded hover:bg-blue-100 dark:hover:bg-blue-900 text-sm'"
+                    [ngClass]="{
+                      'bg-blue-500 text-white hover:bg-blue-600': isSelectedDate(day, vacationStartDate),
+                      'bg-blue-100 dark:bg-blue-900 font-semibold': isToday(day) && !isSelectedDate(day, vacationStartDate),
+                      'text-gray-800 dark:text-white': !isSelectedDate(day, vacationStartDate)
+                    }"
+                  >
+                    {{ day }}
+                  </button>
+                }
+              </div>
+              
+              <button
+                type="button"
+                (click)="closeCalendarPickers()"
+                class="mt-3 w-full px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded"
+              >
+                Cerrar
+              </button>
+            </div>
+          }
+        </div>
+      </div>
+
+      <div class="mt-4">
+        <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
+          Fecha de Fin
+        </label>
+        <div class="relative">
+          <button
+            type="button"
+            (click)="openEndDatePicker()"
+            class="h-11 w-full rounded-lg border border-gray-300 bg-white dark:bg-gray-900 px-4 py-2.5 text-sm text-gray-800 dark:text-white shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 cursor-pointer text-left flex items-center justify-between"
+          >
+            <span>{{ formatDisplayDate(vacationEndDate) }}</span>
+            <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+            </svg>
+          </button>
+          
+          @if (showEndDatePicker) {
+            <div class="absolute z-50 mt-2 p-4 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 w-full">
+              <div class="flex items-center justify-between mb-4">
+                <button type="button" (click)="previousMonth()" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                  </svg>
+                </button>
+                <span class="font-semibold text-gray-800 dark:text-white">
+                  {{ monthNames[calendarMonth] }} {{ calendarYear }}
+                </span>
+                <button type="button" (click)="nextMonth()" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                  </svg>
+                </button>
+              </div>
+              
+              <div class="grid grid-cols-7 gap-1 text-center text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">
+                <div>L</div><div>M</div><div>X</div><div>J</div><div>V</div><div>S</div><div>D</div>
+              </div>
+              
+              <div class="grid grid-cols-7 gap-1">
+                @for (day of calendarDays; track $index) {
+                  <button
+                    type="button"
+                    (click)="selectDate(day, false)"
+                    [disabled]="day === null"
+                    [class]="day === null ? 'invisible' : 'h-8 rounded hover:bg-blue-100 dark:hover:bg-blue-900 text-sm'"
+                    [ngClass]="{
+                      'bg-blue-500 text-white hover:bg-blue-600': isSelectedDate(day, vacationEndDate),
+                      'bg-blue-100 dark:bg-blue-900 font-semibold': isToday(day) && !isSelectedDate(day, vacationEndDate),
+                      'text-gray-800 dark:text-white': !isSelectedDate(day, vacationEndDate)
+                    }"
+                  >
+                    {{ day }}
+                  </button>
+                }
+              </div>
+              
+              <button
+                type="button"
+                (click)="closeCalendarPickers()"
+                class="mt-3 w-full px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded"
+              >
+                Cerrar
+              </button>
+            </div>
+          }
+        </div>
+      </div>
+
+      <div class="mt-4">
+        <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
+          Motivo
+        </label>
+        <textarea
+          [(ngModel)]="vacationReason"
+          rows="3"
+          placeholder="Describe el motivo de tu solicitud..."
+          class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+        ></textarea>
+      </div>
+
+      <div class="flex items-center gap-3 justify-end pt-6 mt-6 border-t border-gray-200 dark:border-gray-700">
+        <button
+          type="button"
+          class="rounded-lg border border-gray-300 bg-white px-6 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
+          (click)="closeVacationModal()"
+        >
+          Cancelar
+        </button>
+        <button
+          type="button"
+          class="rounded-lg bg-brand-500 px-6 py-2.5 text-sm font-medium text-white hover:bg-brand-600"
+          (click)="submitVacationRequest()"
+        >
+          Enviar Solicitud
+        </button>
+      </div>
+    </div>
+  </app-modal>
+
+  <!-- Modal de Gestión de Solicitudes (Solo Administrador) -->
+  <app-modal
+    [isOpen]="isVacationManagementOpen"
+    (close)="closeVacationManagement()"
+    className="max-w-[900px] p-6 lg:p-8"
+  >
+    <div class="flex flex-col px-2 max-h-[80vh] overflow-y-auto custom-scrollbar">
+      <h5 class="mb-6 font-semibold text-gray-800 text-theme-xl dark:text-white/90 lg:text-2xl">
+        Gestión de Solicitudes de Vacaciones
+      </h5>
+
+      @if (vacationRequests.length === 0) {
+        <div class="text-center py-12">
+          <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke-width="2"></rect>
+            <line x1="16" y1="2" x2="16" y2="6" stroke-width="2"></line>
+            <line x1="8" y1="2" x2="8" y2="6" stroke-width="2"></line>
+            <line x1="3" y1="10" x2="21" y2="10" stroke-width="2"></line>
+          </svg>
+          <p class="mt-4 text-gray-500 dark:text-gray-400">No hay solicitudes de vacaciones</p>
+        </div>
+      } @else {
+        <div class="space-y-4">
+          @for (request of vacationRequests; track request.id) {
+            <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition">
+              <div class="flex items-start justify-between gap-4">
+                <div class="flex items-start gap-3 flex-1">
+                  <img 
+                    [src]="request.employeeAvatar" 
+                    [alt]="request.employeeName"
+                    class="w-12 h-12 rounded-full object-cover"
+                    referrerpolicy="no-referrer"
+                  />
+                  <div class="flex-1">
+                    <h6 class="font-semibold text-gray-900 dark:text-white">{{ request.employeeName }}</h6>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                      <span class="font-medium">{{ request.type === 'vacation' ? '🏖️ Vacaciones' : '📅 Día Libre' }}</span>
+                    </p>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                      📅 {{ request.startDate }} - {{ request.endDate }}
+                    </p>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                      💬 {{ request.reason }}
+                    </p>
+                    <p class="text-xs text-gray-500 dark:text-gray-500 mt-2">
+                      Solicitado el: {{ request.requestDate }}
+                    </p>
+                  </div>
+                </div>
+                <div class="flex flex-col items-end gap-2">
+                  @if (request.status === 'pending') {
+                    <span class="px-3 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
+                      Pendiente
+                    </span>
+                  } @else if (request.status === 'approved') {
+                    <span class="px-3 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                      Aprobado
+                    </span>
+                  } @else {
+                    <span class="px-3 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
+                      Rechazado
+                    </span>
+                  }
+                  
+                  <div class="flex gap-2 mt-2">
+                    @if (request.status === 'pending') {
+                      <button
+                        type="button"
+                        (click)="approveVacationRequest(request.id)"
+                        class="px-3 py-1.5 text-xs font-medium rounded-lg bg-green-500 hover:bg-green-600 text-white transition"
+                        title="Aprobar"
+                      >
+                        ✓
+                      </button>
+                      <button
+                        type="button"
+                        (click)="rejectVacationRequest(request.id)"
+                        class="px-3 py-1.5 text-xs font-medium rounded-lg bg-red-500 hover:bg-red-600 text-white transition"
+                        title="Rechazar"
+                      >
+                        ✕
+                      </button>
+                    }
+                    <button
+                      type="button"
+                      (click)="deleteVacationRequest(request.id)"
+                      class="px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-500 hover:bg-gray-600 text-white transition"
+                      title="Eliminar"
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      }
+
+      <div class="flex justify-end pt-6 mt-6 border-t border-gray-200 dark:border-gray-700">
+        <button
+          type="button"
+          class="rounded-lg border border-gray-300 bg-white px-6 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
+          (click)="closeVacationManagement()"
+        >
+          Cerrar
         </button>
       </div>
     </div>

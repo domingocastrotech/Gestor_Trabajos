@@ -74,7 +74,7 @@ export class AuthService {
     const user: GoogleUser = {
       id: payload.sub,
       email: payload.email,
-      name: payload.name,
+      name: payload.name || '',
       picture: payload.picture,
     };
 
@@ -122,6 +122,16 @@ export class AuthService {
     } catch (err) {
       console.error('[AuthService] restoreUser: Failed to parse user data', err);
       localStorage.removeItem(this.storageKey);
+    }
+  }
+
+  private ensureUTF8(str: string): string {
+    if (!str) return str;
+    try {
+      // Asegurar que el string está correctamente interpretado como UTF-8
+      return decodeURIComponent(encodeURIComponent(str));
+    } catch {
+      return str;
     }
   }
 
