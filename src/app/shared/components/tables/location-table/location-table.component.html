@@ -1,0 +1,167 @@
+<div class="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
+  <div class="px-4 pt-4 sm:px-6">
+    <div class="flex flex-col gap-4">
+      @if (alerts.length) {
+        <div class="flex flex-col gap-3">
+          @for (alert of alerts; track alert.id) {
+            <div class="relative">
+              <app-alert [variant]="alert.variant" [title]="alert.title" [message]="alert.message"></app-alert>
+              <button
+                type="button"
+                class="absolute right-3 top-3 text-gray-400 transition hover:text-gray-600 dark:hover:text-gray-200"
+                aria-label="Cerrar alerta"
+                (click)="dismissAlert(alert.id)"
+              >
+                ✕
+              </button>
+            </div>
+          }
+        </div>
+      }
+
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">Localización</h3>
+          <p class="text-sm text-gray-500 dark:text-gray-400">Gestiona las administraciones en memoria.</p>
+        </div>
+        <button
+          type="button"
+          (click)="startAdd()"
+          class="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white shadow-theme-sm transition hover:bg-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-200"
+        >
+          Añadir administración
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="max-w-full overflow-x-auto mt-4">
+    <table class="w-full">
+      <thead class="border-gray-100 border-y dark:border-white/[0.05]">
+        <tr>
+          <th scope="col" class="px-4 py-3 font-medium text-gray-500 sm:px-6 text-start text-theme-xs dark:text-gray-400">Administración</th>
+          <th scope="col" class="px-4 py-3 font-medium text-gray-500 sm:px-6 text-start text-theme-xs dark:text-gray-400">Dirección</th>
+          <th scope="col" class="px-4 py-3 font-medium text-gray-500 sm:px-6 text-start text-theme-xs dark:text-gray-400">Ciudad</th>
+          <th scope="col" class="px-4 py-3 font-medium text-gray-500 sm:px-6 text-start text-theme-xs dark:text-gray-400">Teléfono</th>
+          <th scope="col" class="px-4 py-3 font-medium text-gray-500 sm:px-6 text-end text-theme-xs dark:text-gray-400">Acciones</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100 dark:divide-white/[0.05]">
+        @for (office of offices; track office.id) {
+          <tr>
+            <td class="px-4 py-3 font-medium text-gray-800 sm:px-6 text-start text-theme-sm dark:text-white/90">{{ office.name }}</td>
+            <td class="px-4 py-3 text-gray-500 sm:px-6 text-start text-theme-sm dark:text-gray-400">{{ office.address }}</td>
+            <td class="px-4 py-3 text-gray-500 sm:px-6 text-start text-theme-sm dark:text-gray-400">{{ office.city }}</td>
+            <td class="px-4 py-3 text-gray-500 sm:px-6 text-start text-theme-sm dark:text-gray-400">{{ office.phone }}</td>
+            <td class="px-4 py-3 text-end text-theme-sm sm:px-6">
+              <div class="flex items-center justify-end gap-2">
+                <button
+                  (click)="edit(office)"
+                  class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.06]"
+                >
+                  Editar
+                </button>
+                <button
+                  (click)="remove(office.id)"
+                  class="rounded-lg border border-error-200 bg-error-50 px-3 py-1.5 text-xs font-medium text-error-600 hover:bg-error-100 dark:border-error-500/40 dark:bg-error-500/10 dark:text-error-300"
+                >
+                  Borrar
+                </button>
+              </div>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>
+
+@if (showModal) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" (click)="closeModal()">
+    <div
+      class="w-full max-w-xl rounded-2xl bg-white p-6 shadow-2xl dark:bg-gray-900"
+      (click)="$event.stopPropagation()"
+    >
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <h4 class="text-lg font-semibold text-gray-900 dark:text-white">{{ modalTitle }}</h4>
+          <p class="text-sm text-gray-500 dark:text-gray-400">Completa los datos y guarda para continuar.</p>
+        </div>
+        <button
+          type="button"
+          (click)="closeModal()"
+          class="text-gray-400 transition hover:text-gray-600 dark:hover:text-gray-200"
+          aria-label="Cerrar"
+        >
+          ✕
+        </button>
+      </div>
+
+      <form (ngSubmit)="save()" class="mt-4 grid gap-3 sm:grid-cols-2">
+        <div class="sm:col-span-2">
+          <label class="text-theme-xs font-medium text-gray-600 dark:text-gray-300">Nombre</label>
+          <input
+            [(ngModel)]="form.name"
+            name="name"
+            type="text"
+            class="w-full mt-1 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:focus:ring-brand-400/30"
+            placeholder="Sede Central"
+            required
+          />
+        </div>
+
+        <div class="sm:col-span-2">
+          <label class="text-theme-xs font-medium text-gray-600 dark:text-gray-300">Dirección</label>
+          <input
+            [(ngModel)]="form.address"
+            name="address"
+            type="text"
+            class="w-full mt-1 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:focus:ring-brand-400/30"
+            placeholder="Av. Principal 123"
+            required
+          />
+        </div>
+
+        <div>
+          <label class="text-theme-xs font-medium text-gray-600 dark:text-gray-300">Ciudad</label>
+          <input
+            [(ngModel)]="form.city"
+            name="city"
+            type="text"
+            class="w-full mt-1 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:focus:ring-brand-400/30"
+            placeholder="Madrid"
+            required
+          />
+        </div>
+
+        <div>
+          <label class="text-theme-xs font-medium text-gray-600 dark:text-gray-300">Teléfono</label>
+          <input
+            [(ngModel)]="form.phone"
+            name="phone"
+            type="text"
+            class="w-full mt-1 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:focus:ring-brand-400/30"
+            placeholder="+34 910 000 001"
+            required
+          />
+        </div>
+
+        <div class="sm:col-span-2 flex items-center justify-end gap-3 pt-2">
+          <button
+            type="button"
+            (click)="closeModal()"
+            class="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-200 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.06]"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            class="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white shadow-theme-sm transition hover:bg-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-200"
+          >
+            {{ editingId ? 'Guardar cambios' : 'Añadir administración' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}

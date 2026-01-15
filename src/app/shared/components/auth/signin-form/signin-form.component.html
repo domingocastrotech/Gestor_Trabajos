@@ -1,0 +1,19 @@
+
+<div class="flex flex-col justify-center flex-1 w-full max-w-md mx-auto pt-10">
+  <div class="mb-5 sm:mb-8">
+    <h1 class="mb-2 font-semibold text-gray-800 text-title-sm dark:text-white/90 sm:text-title-md">
+      Inicia sesión con Google
+    </h1>
+    <p class="text-sm text-gray-500 dark:text-gray-400">
+      Solo se permite el acceso mediante Google. Pulsa el botón para continuar.
+    </p>
+  </div>
+
+  <div class="flex flex-col gap-4">
+    <div id="google-signin-button" class="w-full flex justify-center"></div>
+    @if (errorMessage) {
+      <p class="text-sm text-error-500 text-center">{{ errorMessage }}</p>
+    }
+  </div>
+</div>
+
