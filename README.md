@@ -1,55 +1,37 @@
-# Free Angular Tailwind Admin Dashboard Template - TailAdmin Angular
+# Gestor Trabajo - Sistema de Gestión de Empleados
 
-TailAdmin Angular is a **free and open-source admin dashboard template** built with **Angular** and **Tailwind CSS**. It provides developers with everything they need to create a feature-rich, data-driven **back-end, dashboard, or admin panel** for any type of web project.
+**Gestor Trabajo** es una aplicación de gestión empresarial desarrollada con **Angular 21** y **Tailwind CSS v4**. Proporciona una solución completa para la administración de empleados, localización y planificación de tareas mediante un panel de control moderno e intuitivo.
 
-![TailAdmin Angular Admin Dashboard](./angular-tailwind.png)
+## 📋 Descripción del Proyecto
 
+Este proyecto está diseñado para facilitar la gestión de recursos humanos y operaciones empresariales, ofreciendo:
 
-With TailAdmin Angular, you’ll get access to a complete set of **dashboard UI components, elements, and ready-to-use pages** to build a modern, high-quality admin panel. Whether it’s for a **complex web application** or a **lightweight project**, TailAdmin Angular is designed to speed up development of any kind of dashboards and admin panels.
+* **Gestión de empleados**: Control completo del personal de la empresa
+* **Localización**: Seguimiento geográfico de recursos y personal
+* **Calendario**: Planificación y seguimiento de eventos y tareas
+* **Autenticación**: Sistema seguro de inicio de sesión
+* **Dashboard**: Panel de control con información relevante
 
-TailAdmin leverages the **powerful ecosystem of Angular 20+**, along with **TypeScript** and the utility-first styling of **Tailwind CSS v4**. Combined, they make TailAdmin Angular a perfect foundation to launch your dashboard or admin panel quickly and effectively.
+## 🛠️ Tecnologías Utilizadas
 
-TailAdmin Angular comes with essential UI components and layouts for building **feature-rich, data-driven dashboards** and **admin panels**. TailAdmin Angular is built on:
+* **Angular 21** - Framework principal
+* **TypeScript** - Lenguaje de programación
+* **Tailwind CSS v4** - Estilos y diseño responsive
+* **FullCalendar** - Gestión de calendario
+* **ApexCharts** - Visualización de datos
+* **RxJS** - Programación reactiva
+* **AmCharts 5** - Visualización avanzada de datos
 
-* **Angular 20+**
-* **TypeScript**
-* **Tailwind CSS v4**
-
-### Quick Links
-
-- ✨ [Visit Website](https://tailadmin.com/)
-- 🚀 [Angular Demo](https://angular-demo.tailadmin.com/)
-- 📄 [Documentation](https://tailadmin.com/docs)
-- ⬇️ [Download](https://tailadmin.com/download)
-- 🖌️ [Figma Design File (Free Edition)](https://www.figma.com/community/file/1463141366275764364)
-- ⚡ [Get PRO Version](https://tailadmin.com/pricing)
 ---
 
-## Feature Comparison
+## 🚀 Instalación
 
-| Feature | Free Version | Pro Version 🌟 |
-|---------|--------------|----------------|
-| **Dashboards** | 1 Unique Dashboard | 7 Unique Dashboards: Analytics, Ecommerce, Marketing, SaaS, CRM, Stocks, Logistics and more (more coming soon) 📈 |
-| **UI Elements and Components** | 100+ UI elements and components | Included in 500+ components and UI elements |
-| **Design Files** | Basic Figma design files | Complete Figma design system file |
-| **Support** | Community support| Email support |
+### Requisitos Previos
 
-### Other Versions
+Antes de comenzar, asegúrate de tener instalado:
 
-- [Next.js Version](https://github.com/TailAdmin/free-nextjs-admin-dashboard)
-- [React.js Version](https://github.com/TailAdmin/free-react-tailwind-admin-dashboard)
-- [Vue.js Version](https://github.com/TailAdmin/vue-tailwind-admin-dashboard)
-- [Angular Version](https://github.com/TailAdmin/free-angular-tailwind-dashboard)
-- [Laravel Version](https://github.com/TailAdmin/tailadmin-laravel)
-
-## Installation
-
-### Prerequisites
-
-Before you start, make sure you have:
-
-* **Node.js 20.x or later** (Node.js 20.x recommended)
-* **Angular CLI** installed globally:
+* **Node.js 20.x o superior**
+* **Angular CLI** instalado globalmente:
 
 ```bash
 npm install -g @angular/cli
@@ -57,60 +39,188 @@ npm install -g @angular/cli
 
 ---
 
-### Cloning the Repository
+### Instalación del Proyecto
 
-Clone the repository:
+1. **Clonar el repositorio** (si aplica)
 
-```bash
-git clone https://github.com/TailAdmin/free-angular-admin-dashboard.git
-```
-
----
-
-### Install Dependencies
+2. **Instalar dependencias**:
 
 ```bash
 npm install
-# or
-yarn install
 ```
 
----
-
-### Start Development Server
+3. **Iniciar servidor de desarrollo**:
 
 ```bash
 npm start
 ```
 
-Then open:
-👉 `http://localhost:4200`
+4. **Abrir en el navegador**:
+   
+   👉 `http://localhost:4200`
 
 ---
 
-## Angualr.js Tailwind Components
+## 📁 Estructura del Proyecto
 
-TailAdmin Angular ships with a rich set of **ready-to-use dashboard features**:
+```
+src/
+├── app/
+│   ├── pages/
+│   │   ├── auth-pages/      # Páginas de autenticación
+│   │   ├── calender/         # Gestión de calendario
+│   │   ├── dashboard/        # Panel principal
+│   │   ├── blank/            # Página en blanco
+│   │   ├── invoices/         # Gestión de facturas
+│   │   └── tables/
+│   │       ├── basic-tables/ # Gestión de empleados
+│   │       └── localizacion/ # Gestión de localización
+│   ├── shared/
+│   │   ├── components/       # Componentes reutilizables
+│   │   ├── guards/          # Guard de autenticación
+│   │   ├── layout/          # Layouts de la aplicación
+│   │   ├── services/        # Servicios globales
+│   │   └── pipe/            # Pipes personalizadas
+│   └── types/               # Definiciones de TypeScript
+└── public/                  # Recursos estáticos
+    └── images/              # Imágenes del proyecto
+```
 
-* **Ecommerce Dashboard** with essential elements
-* Modern, accessible **sidebar navigation**
-* **Data visualization** with charts and graphs
-* **User profile management** and a **custom 404 page**
-* **Tables** and **charts** (line, bar, etc.)
-* **Authentication forms** and reusable input components
-* **UI elements**: alerts, dropdowns, modals, buttons, and more
-* Built-in **Dark Mode** 🕶️
-* and many more
+---
 
+## ⚙️ Funcionalidades Principales
 
-## Changelog
+### 🔐 Autenticación
+* Sistema de inicio de sesión seguro
+* Guard de autenticación para rutas protegidas
+* Servicio de autenticación centralizado
 
-### v1.0.2 (2025-12-30)
+### 👥 Gestión de Empleados
+* Visualización de listado de empleados en tablas
+* Interfaz intuitiva para gestión del personal
+* Filtrado y búsqueda de empleados
 
-- **Upgrade**: Successfully upgraded project to **Angular 21**.
-- **New Feature**: Implementing **Dynamic API Keys** management.
-  - Added functionalities to **Add**, **Edit**, **Delete**, and **Regenerate** API Keys.
-- **Enhancement**: Integrated **Flatpickr** date range picker in `StatisticsChartComponent`.
-- **Bug Fix**: Resolved `NG0100` ExpressionChangedAfterItHasBeenCheckedError in `PieChartTwoComponent`.
-- **Bug Fix**: Fixed `NG8113` warning in `AddApiKeyModalComponent` by removing unused imports.
-- **Cleanup**: Removed unused imports and optimized code across various components.
+### 📍 Localización
+* Seguimiento geográfico de recursos
+* Gestión de ubicaciones del personal
+* Mapas interactivos (con soporte de Google Maps)
+
+### 📅 Calendario
+* Planificación de eventos y tareas
+* Vista de calendario interactiva
+* Integración con FullCalendar
+* Gestión de eventos con drag & drop
+
+### 🎨 Interfaz de Usuario
+* Diseño responsive con Tailwind CSS
+* Sidebar navegable con menú colapsable
+* Header personalizado
+* Sistema de alertas y notificaciones
+* Tema personalizable (claro/oscuro)
+* Componentes UI reutilizables
+
+---
+
+## 🗺️ Rutas de la Aplicación
+
+### Rutas Protegidas (requieren autenticación)
+
+| Ruta | Componente | Descripción |
+|------|-----------|-------------|
+| `/` | Dashboard | Panel de control principal |
+| `/calendar` | Calendar | Gestión de calendario y eventos |
+| `/empleados` | Basic Tables | Gestión de empleados |
+| `/localizacion` | Localización | Gestión de localización |
+| `/blank` | Blank Page | Página en blanco |
+| `/alerts` | Alerts | Sistema de alertas |
+
+### Rutas Públicas
+
+| Ruta | Componente | Descripción |
+|------|-----------|-------------|
+| `/signin` | Sign In | Inicio de sesión |
+| `/**` | Not Found | Página de error 404 |
+
+---
+
+## 🔧 Servicios Principales
+
+### AuthService
+Gestiona la autenticación de usuarios y el control de sesiones.
+
+### ThemeService
+Controla el tema de la aplicación (claro/oscuro).
+
+### SidebarService
+Gestiona el estado del sidebar (abierto/cerrado).
+
+### ModalService
+Controla los modales de la aplicación.
+
+---
+
+## 🎨 Componentes Destacados
+
+* **app-layout**: Layout principal de la aplicación
+* **app-header**: Encabezado con navegación y opciones de usuario
+* **app-sidebar**: Menú lateral navegable
+* **auth-page-layout**: Layout para páginas de autenticación
+* **backdrop**: Componente para fondos oscuros de modales
+
+---
+
+## 👨‍💻 Desarrollo
+
+Este proyecto está desarrollado como parte del curso **2DAW (Desarrollo de Aplicaciones Web)** y utiliza las mejores prácticas de Angular y TypeScript.
+
+### Características Técnicas
+
+* ✅ **Standalone Components**: Utiliza la arquitectura de componentes standalone de Angular
+* ✅ **Programación Reactiva**: Implementa RxJS para manejo de estados asíncronos
+* ✅ **Guards de Ruta**: Protección de rutas con authGuard
+* ✅ **Lazy Loading**: Optimización de carga de módulos
+* ✅ **Diseño Responsive**: Compatible con dispositivos móviles, tablets y desktop
+* ✅ **Type Safety**: Fuertemente tipado con TypeScript
+
+---
+
+## 📦 Dependencias Principales
+
+```json
+{
+  "@angular/core": "^21.0.6",
+  "@angular/router": "^21.0.6",
+  "tailwindcss": "^4.1.11",
+  "@fullcalendar/angular": "^6.1.20",
+  "apexcharts": "^5.3.2",
+  "@amcharts/amcharts5": "^5.13.5",
+  "rxjs": "~7.8.0"
+}
+```
+
+---
+
+## 📝 Notas
+
+* Utiliza **Angular 21** con standalone components
+* Implementa programación reactiva con **RxJS**
+* Diseño **responsive** para múltiples dispositivos
+* Compatible con las últimas versiones de navegadores modernos
+
+---
+
+## 📄 Licencia
+
+Este proyecto es un trabajo académico para el curso 2DAW.
+
+---
+
+## 🤝 Contribución
+
+Este es un proyecto académico. Las contribuciones están limitadas al ámbito educativo del curso.
+
+---
+
+## 📧 Contacto
+
+Para consultas relacionadas con el proyecto, contactar a través de los canales del curso 2DAW.
