@@ -69,7 +69,6 @@ interface CalendarEvent extends EventInput {
   imports: [
     CommonModule,
     FormsModule,
-    KeyValuePipe,
     FullCalendarModule,
     ModalComponent,
     AlertComponent
@@ -224,7 +223,7 @@ export class CalenderComponent {
   calendarMonth = new Date().getMonth();
   calendarYear = new Date().getFullYear();
   calendarDays: (number | null)[] = [];
-  monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
+  monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
                 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
   locations: Location[] = [
@@ -681,7 +680,7 @@ export class CalenderComponent {
 
   proceedWithEventCreation() {
     this.showConflictModal = false;
-    
+
     const employee = this.eventEmployeeId ? this.employees.find(e => e.id === this.eventEmployeeId) : null;
     const location = this.eventLocation ? this.locations.find(l => l.name === this.eventLocation) : null;
 
@@ -1042,16 +1041,16 @@ export class CalenderComponent {
       icsContent.push(`DTSTART:${formatDate(startDate)}`);
       icsContent.push(`DTEND:${formatDate(endDate)}`);
       icsContent.push(`SUMMARY:${event.title || 'Tarea'}`);
-      
+
       if (event.extendedProps.location) {
         icsContent.push(`LOCATION:${event.extendedProps.location}`);
       }
-      
+
       if (event.extendedProps.employeeName) {
         const description = `Empleado: ${event.extendedProps.employeeName}\\nLocalización: ${event.extendedProps.location || 'N/A'}`;
         icsContent.push(`DESCRIPTION:${description}`);
       }
-      
+
       icsContent.push(`UID:${event.id}@gestortrabajos.com`);
       icsContent.push(`DTSTAMP:${formatDate(new Date())}`);
       icsContent.push('END:VEVENT');
@@ -1114,7 +1113,7 @@ export class CalenderComponent {
     };
 
     this.vacationRequests = [...this.vacationRequests, newRequest];
-    
+
     // Enviar notificación a todos los administradores
     if (this.currentUser) {
       const admins = this.employees.filter(emp => emp.rol === 'Administrador');
@@ -1129,7 +1128,7 @@ export class CalenderComponent {
         });
       });
     }
-    
+
     this.showAlert('success', 'Solicitud enviada', 'Tu solicitud de vacaciones ha sido enviada al administrador');
     this.closeVacationModal();
   }
@@ -1140,7 +1139,7 @@ export class CalenderComponent {
 
     request.status = 'approved';
     this.addVacationToCalendar(request);
-    
+
     // Notificar al empleado
     if (this.currentUser) {
       this.notificationService.addNotification({
@@ -1152,7 +1151,7 @@ export class CalenderComponent {
         data: { requestId: request.id }
       });
     }
-    
+
     this.showAlert('success', 'Solicitud aprobada', `La solicitud de ${request.employeeName} ha sido aprobada`);
   }
 
@@ -1161,7 +1160,7 @@ export class CalenderComponent {
     if (!request) return;
 
     request.status = 'rejected';
-    
+
     // Notificar al empleado
     if (this.currentUser) {
       this.notificationService.addNotification({
@@ -1173,7 +1172,7 @@ export class CalenderComponent {
         data: { requestId: request.id }
       });
     }
-    
+
     this.showAlert('info', 'Solicitud rechazada', `La solicitud de ${request.employeeName} ha sido rechazada`);
   }
 
@@ -1268,14 +1267,14 @@ export class CalenderComponent {
   isEmployeeAvailable(employeeId: number): boolean {
     // Si no hay fecha seleccionada, permitir todos
     if (!this.eventStartDate) return true;
-    
+
     // Verificar si el empleado está de vacaciones ese día
     return !this.isEmployeeOnVacation(employeeId, this.eventStartDate);
   }
 
   getEmployeeVacationInfo(employeeId: number): string {
     if (!this.eventStartDate) return '';
-    
+
     const approvedVacations = this.vacationRequests.filter(
       r => r.status === 'approved' && r.employeeId === employeeId
     );
@@ -1284,14 +1283,14 @@ export class CalenderComponent {
       const start = new Date(vacation.startDate);
       const end = new Date(vacation.endDate);
       const checkDate = new Date(this.eventStartDate);
-      
+
       if (checkDate >= start && checkDate <= end) {
-        return vacation.type === 'vacation' 
-          ? '🏖️ De vacaciones' 
+        return vacation.type === 'vacation'
+          ? '🏖️ De vacaciones'
           : '📅 Día libre';
       }
     }
-    
+
     return '';
   }
 
@@ -1300,8 +1299,8 @@ export class CalenderComponent {
     if (this.eventEmployeeId && !this.isEmployeeAvailable(this.eventEmployeeId)) {
       const employeeName = this.employees.find(e => e.id === this.eventEmployeeId)?.name;
       this.showAlert(
-        'warning', 
-        'Empleado no disponible', 
+        'warning',
+        'Empleado no disponible',
         `${employeeName} no está disponible en esta fecha. Por favor, selecciona otro empleado.`
       );
       this.eventEmployeeId = undefined;
@@ -1329,17 +1328,17 @@ export class CalenderComponent {
   generateCalendar() {
     const firstDay = new Date(this.calendarYear, this.calendarMonth, 1).getDay();
     const daysInMonth = new Date(this.calendarYear, this.calendarMonth + 1, 0).getDate();
-    
+
     this.calendarDays = [];
-    
+
     // Ajustar para que el lunes sea el primer día (0 = domingo -> queremos 1 = lunes)
     const adjustedFirstDay = firstDay === 0 ? 6 : firstDay - 1;
-    
+
     // Agregar días vacíos antes del primer día del mes
     for (let i = 0; i < adjustedFirstDay; i++) {
       this.calendarDays.push(null);
     }
-    
+
     // Agregar todos los días del mes
     for (let day = 1; day <= daysInMonth; day++) {
       this.calendarDays.push(day);
@@ -1368,13 +1367,13 @@ export class CalenderComponent {
 
   selectDate(day: number | null, isStartDate: boolean) {
     if (day === null) return;
-    
+
     // Formatear la fecha manualmente para evitar problemas de zona horaria
     const year = this.calendarYear;
     const month = String(this.calendarMonth + 1).padStart(2, '0');
     const dayStr = String(day).padStart(2, '0');
     const formattedDate = `${year}-${month}-${dayStr}`;
-    
+
     if (isStartDate) {
       this.vacationStartDate = formattedDate;
       this.showStartDatePicker = false;
@@ -1386,7 +1385,7 @@ export class CalenderComponent {
 
   formatDisplayDate(dateStr: string): string {
     if (!dateStr) return 'Seleccionar fecha';
-    
+
     // Parsear la fecha directamente del string YYYY-MM-DD para evitar problemas de zona horaria
     const [year, month, day] = dateStr.split('-').map(Number);
     return `${day} de ${this.monthNames[month - 1]} de ${year}`;
@@ -1394,19 +1393,19 @@ export class CalenderComponent {
 
   isSelectedDate(day: number | null, dateStr: string): boolean {
     if (day === null || !dateStr) return false;
-    
+
     // Comparar directamente los componentes de la fecha
     const [year, month, dayOfMonth] = dateStr.split('-').map(Number);
-    return this.calendarYear === year && 
-           this.calendarMonth === (month - 1) && 
+    return this.calendarYear === year &&
+           this.calendarMonth === (month - 1) &&
            day === dayOfMonth;
   }
 
   isToday(day: number | null): boolean {
     if (day === null) return false;
     const today = new Date();
-    return day === today.getDate() && 
-           this.calendarMonth === today.getMonth() && 
+    return day === today.getDate() &&
+           this.calendarMonth === today.getMonth() &&
            this.calendarYear === today.getFullYear();
   }
 }
