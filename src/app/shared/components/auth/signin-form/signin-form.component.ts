@@ -1,5 +1,5 @@
 
-import { AfterViewInit, Component } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component } from '@angular/core';
 import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../../services/auth.service';
 
@@ -17,16 +17,20 @@ export class SigninFormComponent implements AfterViewInit {
   constructor(
     private authService: AuthService,
     private router: Router,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngAfterViewInit(): void {
-    const initialized = this.authService.initializeGoogleSignIn(
-      this.handleCredentialResponse.bind(this),
-    );
+    setTimeout(() => {
+      const initialized = this.authService.initializeGoogleSignIn(
+        this.handleCredentialResponse.bind(this),
+      );
 
-    if (!initialized) {
-      this.errorMessage = 'No se pudo cargar Google Sign-In. Comprueba tu conexión e inténtalo de nuevo.';
-    }
+      if (!initialized) {
+        this.errorMessage = 'No se pudo cargar Google Sign-In. Comprueba tu conexión e inténtalo de nuevo.';
+        this.cdr.detectChanges();
+      }
+    });
   }
 
   private handleCredentialResponse(response: any): void {
