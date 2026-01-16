@@ -21,16 +21,27 @@ export class SigninFormComponent implements AfterViewInit {
   ) {}
 
   ngAfterViewInit(): void {
-    setTimeout(() => {
-      const initialized = this.authService.initializeGoogleSignIn(
-        this.handleCredentialResponse.bind(this),
-      );
+    this.waitForGoogleScript();
+  }
 
-      if (!initialized) {
-        this.errorMessage = 'No se pudo cargar Google Sign-In. Comprueba tu conexión e inténtalo de nuevo.';
-        this.cdr.detectChanges();
+  private waitForGoogleScript(): void {
+    const checkGoogle = () => {
+      if (typeof (window as any).google !== 'undefined') {
+        const initialized = this.authService.initializeGoogleSignIn(
+          this.handleCredentialResponse.bind(this),
+        );
+
+        if (!initialized) {
+          this.errorMessage = 'No se pudo cargar Google Sign-In. Comprueba tu conexión e inténtalo de nuevo.';
+          this.cdr.detectChanges();
+        }
+      } else {
+        // Reintentar después de 100ms
+        setTimeout(checkGoogle, 100);
       }
-    });
+    };
+
+    setTimeout(checkGoogle, 0);
   }
 
   private handleCredentialResponse(response: any): void {
