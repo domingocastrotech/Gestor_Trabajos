@@ -160,6 +160,108 @@ interface CalendarEvent extends EventInput {
 
       /* Eliminado el estilo circular del icono para evitar la "bola" */
 
+      /* Indicador de localizaciones faltantes - Badge rojo */
+      .missing-location-badge {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        width: 14px;
+        height: 14px;
+        background-color: #ef4444 !important;
+        border-radius: 50%;
+        color: white;
+        font-size: 9px;
+        font-weight: bold;
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        z-index: 10;
+        cursor: help;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        transition: transform 0.2s ease;
+      }
+
+      .missing-location-badge:hover {
+        transform: scale(1.2);
+      }
+
+      .dark .missing-location-badge,
+      :host-context(.dark) .missing-location-badge {
+        background-color: #ef4444 !important;
+      }
+      
+      .fc-daygrid-day-top {
+        position: relative;
+      }
+
+      /* Tooltip personalizado */
+      .missing-locations-tooltip {
+        position: fixed !important;
+        background-color: #fee2e2 !important;
+        color: #991b1b !important;
+        padding: 12px 16px !important;
+        border-radius: 8px !important;
+        border: 1px solid #fecaca !important;
+        font-size: 13px !important;
+        white-space: normal !important;
+        z-index: 99999 !important;
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2) !important;
+        min-width: 180px !important;
+        max-width: 300px !important;
+        text-align: left !important;
+        line-height: 1.6 !important;
+        pointer-events: none !important;
+        display: block !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+      }
+
+      .dark .missing-locations-tooltip,
+      :host-context(.dark) .missing-locations-tooltip {
+        background-color: #fee2e2 !important;
+        color: #991b1b !important;
+        border-color: #fecaca !important;
+      }
+
+      .missing-locations-tooltip::after {
+        content: '' !important;
+        position: absolute !important;
+        bottom: -8px !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        width: 0 !important;
+        height: 0 !important;
+        border-left: 8px solid transparent !important;
+        border-right: 8px solid transparent !important;
+        border-top: 8px solid #fee2e2 !important;
+      }
+
+      .dark .missing-locations-tooltip::after,
+      :host-context(.dark) .missing-locations-tooltip::after {
+        border-top-color: #fee2e2 !important;
+      }
+      
+      .missing-locations-tooltip strong {
+        color: #991b1b !important;
+        font-weight: 600 !important;
+        display: block !important;
+        margin-bottom: 4px !important;
+      }
+
+      .fc .fc-daygrid-day-top {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        padding: 4px;
+      }
+
+      .fc .fc-daygrid-day-number {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+      }
+
     }
   `
 })
@@ -581,7 +683,8 @@ export class CalenderComponent {
         this.openDayEventsModal(args.date.toISOString().split('T')[0]);
         return 'none';
       },
-      eventContent: (arg) => this.renderEventContent(arg)
+      eventContent: (arg) => this.renderEventContent(arg),
+      dayCellDidMount: (arg) => this.addMissingLocationIndicator(arg)
     };
   }
 
@@ -792,8 +895,29 @@ export class CalenderComponent {
 
   private openDayEventsModal(dateStr: string) {
     const calendarApi = this.calendarComponent.getApi();
+    const selectedDate = new Date(dateStr + 'T00:00:00'); // Crear fecha sin zona horaria
+    
     const eventsForDay = calendarApi.getEvents().filter(ev => {
       if (!ev.start) return false;
+      
+      const eventStart = new Date(ev.start);
+      
+      // Si el evento tiene una fecha de fin
+      if (ev.end) {
+        const eventEnd = new Date(ev.end);
+        // Para eventos de día completo (allDay), la fecha de fin es exclusiva
+        // Por ejemplo, si termina el 25, realmente termina el 24
+        if (ev.allDay) {
+          // Restar un día a la fecha de fin para obtener el último día incluido
+          eventEnd.setDate(eventEnd.getDate() - 1);
+        }
+        
+        // Verificar si la fecha seleccionada está dentro del rango del evento
+        return selectedDate >= new Date(eventStart.toDateString()) && 
+               selectedDate <= new Date(eventEnd.toDateString());
+      }
+      
+      // Si no hay fecha de fin, solo verificar la fecha de inicio
       const day = this.formatLocalDate(ev.start);
       return day === dateStr;
     });
@@ -1407,6 +1531,145 @@ export class CalenderComponent {
     return day === today.getDate() &&
            this.calendarMonth === today.getMonth() &&
            this.calendarYear === today.getFullYear();
+  }
+
+  // Verificar si faltan localizaciones por cubrir en un día
+  private hasMissingLocations(dateStr: string): { hasMissing: boolean; count: number; missingLocations: string[] } {
+    const calendarApi = this.calendarComponent?.getApi();
+    if (!calendarApi) return { hasMissing: false, count: 0, missingLocations: [] };
+
+    const selectedDate = new Date(dateStr + 'T00:00:00');
+    
+    const eventsForDay = calendarApi.getEvents().filter(ev => {
+      if (!ev.start) return false;
+      
+      const eventStart = new Date(ev.start);
+      
+      // Si el evento tiene una fecha de fin
+      if (ev.end) {
+        const eventEnd = new Date(ev.end);
+        // Para eventos de día completo (allDay), la fecha de fin es exclusiva
+        if (ev.allDay) {
+          eventEnd.setDate(eventEnd.getDate() - 1);
+        }
+        
+        // Verificar si la fecha seleccionada está dentro del rango del evento
+        return selectedDate >= new Date(eventStart.toDateString()) && 
+               selectedDate <= new Date(eventEnd.toDateString());
+      }
+      
+      // Si no hay fecha de fin, solo verificar la fecha de inicio
+      const day = this.formatLocalDate(ev.start);
+      return day === dateStr;
+    });
+
+    // Filtrar solo tareas (no vacaciones)
+    const tasks = eventsForDay.filter(ev => {
+      const isVacation = ev.extendedProps['isVacation'] || false;
+      return !isVacation;
+    });
+
+    // Obtener las localizaciones que tienen tareas asignadas ese día
+    const assignedLocations = new Set<string>();
+    tasks.forEach(ev => {
+      const location = ev.extendedProps['location'];
+      if (location && location.trim() !== '') {
+        assignedLocations.add(location);
+      }
+    });
+
+    // Obtener todas las localizaciones disponibles
+    const allLocationNames = this.locations.map(loc => loc.name);
+    
+    // Encontrar las localizaciones que NO tienen tareas asignadas
+    const missingLocations = allLocationNames.filter(loc => !assignedLocations.has(loc));
+
+    return {
+      hasMissing: missingLocations.length > 0,
+      count: missingLocations.length,
+      missingLocations: missingLocations
+    };
+  }
+
+  // Agregar indicador visual en los días donde faltan localizaciones por cubrir
+  private addMissingLocationIndicator(arg: any) {
+    const dateStr = arg.date.toISOString().split('T')[0];
+    const { hasMissing, count, missingLocations } = this.hasMissingLocations(dateStr);
+
+    if (hasMissing) {
+      // Buscar el elemento day-top para agregar el badge
+      const dayTop = arg.el.querySelector('.fc-daygrid-day-top');
+      if (!dayTop) {
+        return;
+      }
+      
+      // Crear el badge (icono circular rojo con !)
+      const badge = document.createElement('div');
+      badge.className = 'missing-location-badge';
+      badge.innerHTML = '!';
+      badge.style.position = 'absolute';
+      badge.style.top = '4px';
+      badge.style.right = '4px';
+      badge.style.width = '14px';
+      badge.style.height = '14px';
+      badge.style.backgroundColor = '#ef4444';
+      badge.style.borderRadius = '50%';
+      badge.style.color = 'white';
+      badge.style.fontSize = '9px';
+      badge.style.fontWeight = 'bold';
+      badge.style.display = 'flex';
+      badge.style.alignItems = 'center';
+      badge.style.justifyContent = 'center';
+      badge.style.zIndex = '10';
+      badge.style.cursor = 'help';
+      badge.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.2)';
+      
+      dayTop.appendChild(badge);
+      
+      // Crear el contenido del tooltip con viñetas
+      const locationsList = missingLocations.map(loc => `• ${loc}`).join('<br>');
+      const tooltipContent = '<strong>Faltan tareas:</strong><br>' + locationsList;
+      
+      // Variable para mantener referencia al tooltip
+      let tooltip: HTMLElement | null = null;
+      
+      // Evento mouseenter solo en el badge - mostrar tooltip
+      badge.addEventListener('mouseenter', (e: MouseEvent) => {
+        // Crear tooltip
+        tooltip = document.createElement('div');
+        tooltip.className = 'missing-locations-tooltip';
+        tooltip.innerHTML = tooltipContent;
+        tooltip.style.position = 'fixed';
+        tooltip.style.zIndex = '99999';
+        tooltip.style.backgroundColor = '#fee2e2';
+        tooltip.style.color = '#991b1b';
+        tooltip.style.padding = '12px 16px';
+        tooltip.style.borderRadius = '8px';
+        tooltip.style.border = '1px solid #fecaca';
+        tooltip.style.boxShadow = '0 4px 12px rgba(239, 68, 68, 0.5)';
+        tooltip.style.minWidth = '180px';
+        
+        document.body.appendChild(tooltip);
+        
+        // Posicionar el tooltip encima del badge
+        const rect = badge.getBoundingClientRect();
+        const tooltipRect = tooltip.getBoundingClientRect();
+        
+        const left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
+        const top = rect.top - tooltipRect.height - 12;
+        
+        tooltip.style.left = Math.max(10, left) + 'px';
+        tooltip.style.top = Math.max(10, top) + 'px';
+      });
+      
+      // Evento mouseleave del badge - ocultar tooltip
+      badge.addEventListener('mouseleave', () => {
+        if (tooltip && tooltip.parentNode) {
+          tooltip.parentNode.removeChild(tooltip);
+          tooltip = null;
+        }
+      });
+    }
   }
 }
 

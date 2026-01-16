@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectorRef } from '@angular/core';
 import { DropdownComponent } from '../../ui/dropdown/dropdown.component';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
@@ -15,7 +15,7 @@ export class UserDropdownComponent {
   isOpen = false;
   private utf8Fix = new Utf8FixPipe();
 
-  constructor(public authService: AuthService) {}
+  constructor(public authService: AuthService, private cdr: ChangeDetectorRef) {}
 
   get user() {
     return this.authService.user;
@@ -40,10 +40,12 @@ export class UserDropdownComponent {
 
   toggleDropdown() {
     this.isOpen = !this.isOpen;
+    this.cdr.detectChanges();
   }
 
   closeDropdown() {
     this.isOpen = false;
+    this.cdr.detectChanges();
   }
 
   signOut() {
