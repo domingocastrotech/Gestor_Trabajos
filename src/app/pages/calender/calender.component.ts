@@ -189,7 +189,7 @@ interface CalendarEvent extends EventInput {
       :host-context(.dark) .missing-location-badge {
         background-color: #ef4444 !important;
       }
-      
+
       .fc-daygrid-day-top {
         position: relative;
       }
@@ -240,7 +240,7 @@ interface CalendarEvent extends EventInput {
       :host-context(.dark) .missing-locations-tooltip::after {
         border-top-color: #fee2e2 !important;
       }
-      
+
       .missing-locations-tooltip strong {
         color: #991b1b !important;
         font-weight: 600 !important;
@@ -896,12 +896,12 @@ export class CalenderComponent {
   private openDayEventsModal(dateStr: string) {
     const calendarApi = this.calendarComponent.getApi();
     const selectedDate = new Date(dateStr + 'T00:00:00'); // Crear fecha sin zona horaria
-    
+
     const eventsForDay = calendarApi.getEvents().filter(ev => {
       if (!ev.start) return false;
-      
+
       const eventStart = new Date(ev.start);
-      
+
       // Si el evento tiene una fecha de fin
       if (ev.end) {
         const eventEnd = new Date(ev.end);
@@ -911,12 +911,12 @@ export class CalenderComponent {
           // Restar un día a la fecha de fin para obtener el último día incluido
           eventEnd.setDate(eventEnd.getDate() - 1);
         }
-        
+
         // Verificar si la fecha seleccionada está dentro del rango del evento
-        return selectedDate >= new Date(eventStart.toDateString()) && 
+        return selectedDate >= new Date(eventStart.toDateString()) &&
                selectedDate <= new Date(eventEnd.toDateString());
       }
-      
+
       // Si no hay fecha de fin, solo verificar la fecha de inicio
       const day = this.formatLocalDate(ev.start);
       return day === dateStr;
@@ -1213,6 +1213,40 @@ export class CalenderComponent {
 
   closeVacationManagement() {
     this.isVacationManagementOpen = false;
+  }
+
+  // Estado de pestañas para la gestión de vacaciones
+  vacationTab: 'pending' | 'approved' | 'rejected' | 'completed' = 'pending';
+
+  setVacationTab(tab: 'pending' | 'approved' | 'rejected' | 'completed') {
+    this.vacationTab = tab;
+  }
+
+  private isDatePast(dateStr: string): boolean {
+    // Comparación sin hora utilizando YYYY-MM-DD
+    const today = new Date();
+    const [y, m, d] = [today.getFullYear(), today.getMonth() + 1, today.getDate()];
+    const todayStr = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    return dateStr < todayStr;
+  }
+
+  // Listas filtradas por pestaña
+  get pendingRequests(): VacationRequest[] {
+    return this.vacationRequests.filter(r => r.status === 'pending');
+  }
+
+  get approvedRequests(): VacationRequest[] {
+    // Aprobadas que aún no han terminado (hoy o futuro)
+    return this.vacationRequests.filter(r => r.status === 'approved' && !this.isDatePast(r.endDate));
+  }
+
+  get rejectedRequests(): VacationRequest[] {
+    return this.vacationRequests.filter(r => r.status === 'rejected');
+  }
+
+  get completedRequests(): VacationRequest[] {
+    // "Cumplidas": aprobadas y cuya fecha de fin ya pasó
+    return this.vacationRequests.filter(r => r.status === 'approved' && this.isDatePast(r.endDate));
   }
 
   submitVacationRequest() {
@@ -1539,12 +1573,12 @@ export class CalenderComponent {
     if (!calendarApi) return { hasMissing: false, count: 0, missingLocations: [] };
 
     const selectedDate = new Date(dateStr + 'T00:00:00');
-    
+
     const eventsForDay = calendarApi.getEvents().filter(ev => {
       if (!ev.start) return false;
-      
+
       const eventStart = new Date(ev.start);
-      
+
       // Si el evento tiene una fecha de fin
       if (ev.end) {
         const eventEnd = new Date(ev.end);
@@ -1552,12 +1586,12 @@ export class CalenderComponent {
         if (ev.allDay) {
           eventEnd.setDate(eventEnd.getDate() - 1);
         }
-        
+
         // Verificar si la fecha seleccionada está dentro del rango del evento
-        return selectedDate >= new Date(eventStart.toDateString()) && 
+        return selectedDate >= new Date(eventStart.toDateString()) &&
                selectedDate <= new Date(eventEnd.toDateString());
       }
-      
+
       // Si no hay fecha de fin, solo verificar la fecha de inicio
       const day = this.formatLocalDate(ev.start);
       return day === dateStr;
@@ -1580,7 +1614,7 @@ export class CalenderComponent {
 
     // Obtener todas las localizaciones disponibles
     const allLocationNames = this.locations.map(loc => loc.name);
-    
+
     // Encontrar las localizaciones que NO tienen tareas asignadas
     const missingLocations = allLocationNames.filter(loc => !assignedLocations.has(loc));
 
@@ -1602,7 +1636,7 @@ export class CalenderComponent {
       if (!dayTop) {
         return;
       }
-      
+
       // Crear el badge (icono circular rojo con !)
       const badge = document.createElement('div');
       badge.className = 'missing-location-badge';
@@ -1623,16 +1657,16 @@ export class CalenderComponent {
       badge.style.zIndex = '10';
       badge.style.cursor = 'help';
       badge.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.2)';
-      
+
       dayTop.appendChild(badge);
-      
+
       // Crear el contenido del tooltip con viñetas
       const locationsList = missingLocations.map(loc => `• ${loc}`).join('<br>');
       const tooltipContent = '<strong>Faltan tareas:</strong><br>' + locationsList;
-      
+
       // Variable para mantener referencia al tooltip
       let tooltip: HTMLElement | null = null;
-      
+
       // Evento mouseenter solo en el badge - mostrar tooltip
       badge.addEventListener('mouseenter', (e: MouseEvent) => {
         // Crear tooltip
@@ -1648,20 +1682,20 @@ export class CalenderComponent {
         tooltip.style.border = '1px solid #fecaca';
         tooltip.style.boxShadow = '0 4px 12px rgba(239, 68, 68, 0.5)';
         tooltip.style.minWidth = '180px';
-        
+
         document.body.appendChild(tooltip);
-        
+
         // Posicionar el tooltip encima del badge
         const rect = badge.getBoundingClientRect();
         const tooltipRect = tooltip.getBoundingClientRect();
-        
+
         const left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
         const top = rect.top - tooltipRect.height - 12;
-        
+
         tooltip.style.left = Math.max(10, left) + 'px';
         tooltip.style.top = Math.max(10, top) + 'px';
       });
-      
+
       // Evento mouseleave del badge - ocultar tooltip
       badge.addEventListener('mouseleave', () => {
         if (tooltip && tooltip.parentNode) {

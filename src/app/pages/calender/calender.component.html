@@ -158,8 +158,8 @@
         >
           <option [ngValue]="undefined">Seleccionar empleado</option>
           @for (employee of employees; track employee.id) {
-            <option 
-              [ngValue]="employee.id" 
+            <option
+              [ngValue]="employee.id"
               [disabled]="!isEmployeeAvailable(employee.id)"
               [class.text-gray-400]="!isEmployeeAvailable(employee.id)"
             >
@@ -398,7 +398,7 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
             </svg>
           </button>
-          
+
           @if (showStartDatePicker) {
             <div class="absolute z-50 mt-2 p-4 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 w-full">
               <div class="flex items-center justify-between mb-4">
@@ -416,11 +416,11 @@
                   </svg>
                 </button>
               </div>
-              
+
               <div class="grid grid-cols-7 gap-1 text-center text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">
                 <div>L</div><div>M</div><div>X</div><div>J</div><div>V</div><div>S</div><div>D</div>
               </div>
-              
+
               <div class="grid grid-cols-7 gap-1">
                 @for (day of calendarDays; track $index) {
                   <button
@@ -438,7 +438,7 @@
                   </button>
                 }
               </div>
-              
+
               <button
                 type="button"
                 (click)="closeCalendarPickers()"
@@ -466,7 +466,7 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
             </svg>
           </button>
-          
+
           @if (showEndDatePicker) {
             <div class="absolute z-50 mt-2 p-4 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 w-full">
               <div class="flex items-center justify-between mb-4">
@@ -484,11 +484,11 @@
                   </svg>
                 </button>
               </div>
-              
+
               <div class="grid grid-cols-7 gap-1 text-center text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">
                 <div>L</div><div>M</div><div>X</div><div>J</div><div>V</div><div>S</div><div>D</div>
               </div>
-              
+
               <div class="grid grid-cols-7 gap-1">
                 @for (day of calendarDays; track $index) {
                   <button
@@ -506,7 +506,7 @@
                   </button>
                 }
               </div>
-              
+
               <button
                 type="button"
                 (click)="closeCalendarPickers()"
@@ -572,79 +572,149 @@
           <p class="mt-4 text-gray-500 dark:text-gray-400">No hay solicitudes de vacaciones</p>
         </div>
       } @else {
+        <!-- Pestañas -->
+        <div class="flex items-center gap-2 border-b border-gray-200 dark:border-gray-700 mb-4">
+          <button type="button" (click)="setVacationTab('pending')"
+            class="px-3 py-2 text-sm rounded-t-md hover:bg-gray-50 dark:hover:bg-gray-700"
+            [class.bg-gray-100]="vacationTab === 'pending'"
+            [class.dark:bg-gray-800]="vacationTab === 'pending'"
+            [class.font-semibold]="vacationTab === 'pending'"
+            [class.text-gray-900]="vacationTab === 'pending'"
+            [class.dark:text-white]="vacationTab === 'pending'"
+            [class.text-gray-600]="vacationTab !== 'pending'"
+            [class.dark:text-gray-300]="vacationTab !== 'pending'">
+            Pendientes ({{ pendingRequests.length }})
+          </button>
+          <button type="button" (click)="setVacationTab('approved')"
+            class="px-3 py-2 text-sm rounded-t-md hover:bg-gray-50 dark:hover:bg-gray-700"
+            [class.bg-gray-100]="vacationTab === 'approved'"
+            [class.dark:bg-gray-800]="vacationTab === 'approved'"
+            [class.font-semibold]="vacationTab === 'approved'"
+            [class.text-gray-900]="vacationTab === 'approved'"
+            [class.dark:text-white]="vacationTab === 'approved'"
+            [class.text-gray-600]="vacationTab !== 'approved'"
+            [class.dark:text-gray-300]="vacationTab !== 'approved'">
+            Aprobadas ({{ approvedRequests.length }})
+          </button>
+          <button type="button" (click)="setVacationTab('rejected')"
+            class="px-3 py-2 text-sm rounded-t-md hover:bg-gray-50 dark:hover:bg-gray-700"
+            [class.bg-gray-100]="vacationTab === 'rejected'"
+            [class.dark:bg-gray-800]="vacationTab === 'rejected'"
+            [class.font-semibold]="vacationTab === 'rejected'"
+            [class.text-gray-900]="vacationTab === 'rejected'"
+            [class.dark:text-white]="vacationTab === 'rejected'"
+            [class.text-gray-600]="vacationTab !== 'rejected'"
+            [class.dark:text-gray-300]="vacationTab !== 'rejected'">
+            Denegadas ({{ rejectedRequests.length }})
+          </button>
+          <button type="button" (click)="setVacationTab('completed')"
+            class="px-3 py-2 text-sm rounded-t-md hover:bg-gray-50 dark:hover:bg-gray-700"
+            [class.bg-gray-100]="vacationTab === 'completed'"
+            [class.dark:bg-gray-800]="vacationTab === 'completed'"
+            [class.font-semibold]="vacationTab === 'completed'"
+            [class.text-gray-900]="vacationTab === 'completed'"
+            [class.dark:text-white]="vacationTab === 'completed'"
+            [class.text-gray-600]="vacationTab !== 'completed'"
+            [class.dark:text-gray-300]="vacationTab !== 'completed'">
+            Cumplidas ({{ completedRequests.length }})
+          </button>
+        </div>
+
+        <!-- Contenido por pestaña -->
         <div class="space-y-4">
-          @for (request of vacationRequests; track request.id) {
-            <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition">
-              <div class="flex items-start justify-between gap-4">
-                <div class="flex items-start gap-3 flex-1">
-                  <img 
-                    [src]="request.employeeAvatar" 
-                    [alt]="request.employeeName"
-                    class="w-12 h-12 rounded-full object-cover"
-                    referrerpolicy="no-referrer"
-                  />
-                  <div class="flex-1">
-                    <h6 class="font-semibold text-gray-900 dark:text-white">{{ request.employeeName }}</h6>
-                    <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                      <span class="font-medium">{{ request.type === 'vacation' ? '🏖️ Vacaciones' : '📅 Día Libre' }}</span>
-                    </p>
-                    <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                      📅 {{ request.startDate }} - {{ request.endDate }}
-                    </p>
-                    <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                      💬 {{ request.reason }}
-                    </p>
-                    <p class="text-xs text-gray-500 dark:text-gray-500 mt-2">
-                      Solicitado el: {{ request.requestDate }}
-                    </p>
+          @if (vacationTab === 'pending') {
+            @for (request of pendingRequests; track request.id) {
+              <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition">
+                <div class="flex items-start justify-between gap-4">
+                  <div class="flex items-start gap-3 flex-1">
+                    <img [src]="request.employeeAvatar" [alt]="request.employeeName" class="w-12 h-12 rounded-full object-cover" referrerpolicy="no-referrer" />
+                    <div class="flex-1">
+                      <h6 class="font-semibold text-gray-900 dark:text-white">{{ request.employeeName }}</h6>
+                      <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                        <span class="font-medium">{{ request.type === 'vacation' ? '🏖️ Vacaciones' : '📅 Día Libre' }}</span>
+                      </p>
+                      <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">📅 {{ request.startDate }} - {{ request.endDate }}</p>
+                      <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">💬 {{ request.reason }}</p>
+                      <p class="text-xs text-gray-500 dark:text-gray-500 mt-2">Solicitado el: {{ request.requestDate }}</p>
+                    </div>
                   </div>
-                </div>
-                <div class="flex flex-col items-end gap-2">
-                  @if (request.status === 'pending') {
-                    <span class="px-3 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
-                      Pendiente
-                    </span>
-                  } @else if (request.status === 'approved') {
-                    <span class="px-3 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
-                      Aprobado
-                    </span>
-                  } @else {
-                    <span class="px-3 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
-                      Rechazado
-                    </span>
-                  }
-                  
-                  <div class="flex gap-2 mt-2">
-                    @if (request.status === 'pending') {
-                      <button
-                        type="button"
-                        (click)="approveVacationRequest(request.id)"
-                        class="px-3 py-1.5 text-xs font-medium rounded-lg bg-green-500 hover:bg-green-600 text-white transition"
-                        title="Aprobar"
-                      >
-                        ✓
-                      </button>
-                      <button
-                        type="button"
-                        (click)="rejectVacationRequest(request.id)"
-                        class="px-3 py-1.5 text-xs font-medium rounded-lg bg-red-500 hover:bg-red-600 text-white transition"
-                        title="Rechazar"
-                      >
-                        ✕
-                      </button>
-                    }
-                    <button
-                      type="button"
-                      (click)="deleteVacationRequest(request.id)"
-                      class="px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-500 hover:bg-gray-600 text-white transition"
-                      title="Eliminar"
-                    >
-                      🗑️
-                    </button>
+                  <div class="flex flex-col items-end gap-2">
+                    <span class="px-3 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">Pendiente</span>
+                    <div class="flex gap-2 mt-2">
+                      <button type="button" (click)="approveVacationRequest(request.id)" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-green-500 hover:bg-green-600 text-white transition" title="Aprobar">✓</button>
+                      <button type="button" (click)="rejectVacationRequest(request.id)" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-red-500 hover:bg-red-600 text-white transition" title="Rechazar">✕</button>
+                      <button type="button" (click)="deleteVacationRequest(request.id)" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-500 hover:bg-gray-600 text-white transition" title="Eliminar">🗑️</button>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            }
+          } @else if (vacationTab === 'approved') {
+            @for (request of approvedRequests; track request.id) {
+              <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition">
+                <div class="flex items-start justify-between gap-4">
+                  <div class="flex items-start gap-3 flex-1">
+                    <img [src]="request.employeeAvatar" [alt]="request.employeeName" class="w-12 h-12 rounded-full object-cover" referrerpolicy="no-referrer" />
+                    <div class="flex-1">
+                      <h6 class="font-semibold text-gray-900 dark:text-white">{{ request.employeeName }}</h6>
+                      <p class="text-sm text-gray-600 dark:text-gray-400 mt-1"><span class="font-medium">{{ request.type === 'vacation' ? '🏖️ Vacaciones' : '📅 Día Libre' }}</span></p>
+                      <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">📅 {{ request.startDate }} - {{ request.endDate }}</p>
+                      <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">💬 {{ request.reason }}</p>
+                    </div>
+                  </div>
+                  <div class="flex flex-col items-end gap-2">
+                    <span class="px-3 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">Aprobado</span>
+                    <div class="flex gap-2 mt-2">
+                      <button type="button" (click)="deleteVacationRequest(request.id)" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-500 hover:bg-gray-600 text-white transition" title="Eliminar">🗑️</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            }
+          } @else if (vacationTab === 'rejected') {
+            @for (request of rejectedRequests; track request.id) {
+              <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition">
+                <div class="flex items-start justify-between gap-4">
+                  <div class="flex items-start gap-3 flex-1">
+                    <img [src]="request.employeeAvatar" [alt]="request.employeeName" class="w-12 h-12 rounded-full object-cover" referrerpolicy="no-referrer" />
+                    <div class="flex-1">
+                      <h6 class="font-semibold text-gray-900 dark:text-white">{{ request.employeeName }}</h6>
+                      <p class="text-sm text-gray-600 dark:text-gray-400 mt-1"><span class="font-medium">{{ request.type === 'vacation' ? '🏖️ Vacaciones' : '📅 Día Libre' }}</span></p>
+                      <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">📅 {{ request.startDate }} - {{ request.endDate }}</p>
+                      <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">💬 {{ request.reason }}</p>
+                    </div>
+                  </div>
+                  <div class="flex flex-col items-end gap-2">
+                    <span class="px-3 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">Rechazado</span>
+                    <div class="flex gap-2 mt-2">
+                      <button type="button" (click)="deleteVacationRequest(request.id)" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-500 hover:bg-gray-600 text-white transition" title="Eliminar">🗑️</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            }
+          } @else {
+            @for (request of completedRequests; track request.id) {
+              <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition">
+                <div class="flex items-start justify-between gap-4">
+                  <div class="flex items-start gap-3 flex-1">
+                    <img [src]="request.employeeAvatar" [alt]="request.employeeName" class="w-12 h-12 rounded-full object-cover" referrerpolicy="no-referrer" />
+                    <div class="flex-1">
+                      <h6 class="font-semibold text-gray-900 dark:text-white">{{ request.employeeName }}</h6>
+                      <p class="text-sm text-gray-600 dark:text-gray-400 mt-1"><span class="font-medium">{{ request.type === 'vacation' ? '🏖️ Vacaciones' : '📅 Día Libre' }}</span></p>
+                      <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">📅 {{ request.startDate }} - {{ request.endDate }}</p>
+                      <p class="text-xs text-gray-500 dark:text-gray-500 mt-2">Finalizadas</p>
+                    </div>
+                  </div>
+                  <div class="flex flex-col items-end gap-2">
+                    <span class="px-3 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700/50 dark:text-gray-200">Cumplida</span>
+                    <div class="flex gap-2 mt-2">
+                      <button type="button" (click)="deleteVacationRequest(request.id)" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-500 hover:bg-gray-600 text-white transition" title="Eliminar">🗑️</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            }
           }
         </div>
       }
