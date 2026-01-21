@@ -22,14 +22,14 @@
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">Localización</h3>
-          <p class="text-sm text-gray-500 dark:text-gray-400">Gestiona las administraciones en memoria.</p>
+          <p class="text-sm text-gray-500 dark:text-gray-400">Gestiona las localizaciones en Supabase.</p>
         </div>
         <button
           type="button"
           (click)="startAdd()"
           class="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white shadow-theme-sm transition hover:bg-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-200"
         >
-          Añadir administración
+          Añadir localización
         </button>
       </div>
     </div>
@@ -42,27 +42,25 @@
           <th scope="col" class="px-4 py-3 font-medium text-gray-500 sm:px-6 text-start text-theme-xs dark:text-gray-400">Administración</th>
           <th scope="col" class="px-4 py-3 font-medium text-gray-500 sm:px-6 text-start text-theme-xs dark:text-gray-400">Dirección</th>
           <th scope="col" class="px-4 py-3 font-medium text-gray-500 sm:px-6 text-start text-theme-xs dark:text-gray-400">Ciudad</th>
-          <th scope="col" class="px-4 py-3 font-medium text-gray-500 sm:px-6 text-start text-theme-xs dark:text-gray-400">Teléfono</th>
           <th scope="col" class="px-4 py-3 font-medium text-gray-500 sm:px-6 text-end text-theme-xs dark:text-gray-400">Acciones</th>
         </tr>
       </thead>
       <tbody class="divide-y divide-gray-100 dark:divide-white/[0.05]">
-        @for (office of offices; track office.id) {
+        @for (location of locations; track location.id) {
           <tr>
-            <td class="px-4 py-3 font-medium text-gray-800 sm:px-6 text-start text-theme-sm dark:text-white/90">{{ office.name }}</td>
-            <td class="px-4 py-3 text-gray-500 sm:px-6 text-start text-theme-sm dark:text-gray-400">{{ office.address }}</td>
-            <td class="px-4 py-3 text-gray-500 sm:px-6 text-start text-theme-sm dark:text-gray-400">{{ office.city }}</td>
-            <td class="px-4 py-3 text-gray-500 sm:px-6 text-start text-theme-sm dark:text-gray-400">{{ office.phone }}</td>
+            <td class="px-4 py-3 font-medium text-gray-800 sm:px-6 text-start text-theme-sm dark:text-white/90">{{ location.name }}</td>
+            <td class="px-4 py-3 text-gray-500 sm:px-6 text-start text-theme-sm dark:text-gray-400">{{ location.address }}</td>
+            <td class="px-4 py-3 text-gray-500 sm:px-6 text-start text-theme-sm dark:text-gray-400">{{ location.city }}</td>
             <td class="px-4 py-3 text-end text-theme-sm sm:px-6">
               <div class="flex items-center justify-end gap-2">
                 <button
-                  (click)="edit(office)"
+                  (click)="edit(location)"
                   class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.06]"
                 >
                   Editar
                 </button>
                 <button
-                  (click)="remove(office.id)"
+                  (click)="remove(location.id)"
                   class="rounded-lg border border-error-200 bg-error-50 px-3 py-1.5 text-xs font-medium text-error-600 hover:bg-error-100 dark:border-error-500/40 dark:bg-error-500/10 dark:text-error-300"
                 >
                   Borrar
@@ -75,6 +73,49 @@
     </table>
   </div>
 </div>
+
+<!-- Modal de confirmación de borrado -->
+@if (deleteConfirmation.isOpen) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" (click)="closeDeleteConfirmation()">
+    <div
+      class="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl dark:bg-gray-900"
+      (click)="$event.stopPropagation()"
+    >
+      <div class="flex flex-col items-center gap-4 text-center">
+        <div class="flex h-12 w-12 items-center justify-center rounded-full bg-error-100 dark:bg-error-500/20">
+          <svg class="h-6 w-6 text-error-600 dark:text-error-300" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+          </svg>
+        </div>
+
+        <div>
+          <h4 class="font-semibold text-gray-900 dark:text-white">¿Eliminar localización?</h4>
+          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            ¿Estás seguro de que quieres eliminar "<span class="font-medium">{{ deleteConfirmation.locationName }}</span>"? Esta acción no se puede deshacer.
+          </p>
+        </div>
+      </div>
+
+      <div class="mt-6 flex items-center justify-center gap-3">
+        <button
+          type="button"
+          (click)="closeDeleteConfirmation()"
+          class="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-200 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.06]"
+        >
+          Cancelar
+        </button>
+        <button
+          type="button"
+          (click)="confirmDelete()"
+          [disabled]="isLoading"
+          class="inline-flex items-center justify-center gap-2 rounded-lg bg-error-600 px-4 py-2 text-sm font-medium text-white shadow-theme-sm transition hover:bg-error-700 focus:outline-none focus:ring-2 focus:ring-error-200 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-error-500 dark:hover:bg-error-600 dark:focus:ring-error-400/30"
+        >
+          Eliminar
+        </button>
+      </div>
+    </div>
+  </div>
+}
 
 @if (showModal) {
   <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" (click)="closeModal()">
@@ -122,7 +163,7 @@
           />
         </div>
 
-        <div>
+        <div class="sm:col-span-2">
           <label class="text-theme-xs font-medium text-gray-600 dark:text-gray-300">Ciudad</label>
           <input
             [(ngModel)]="form.city"
@@ -130,18 +171,6 @@
             type="text"
             class="w-full mt-1 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:focus:ring-brand-400/30"
             placeholder="Madrid"
-            required
-          />
-        </div>
-
-        <div>
-          <label class="text-theme-xs font-medium text-gray-600 dark:text-gray-300">Teléfono</label>
-          <input
-            [(ngModel)]="form.phone"
-            name="phone"
-            type="text"
-            class="w-full mt-1 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:focus:ring-brand-400/30"
-            placeholder="+34 910 000 001"
             required
           />
         </div>
@@ -158,7 +187,7 @@
             type="submit"
             class="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white shadow-theme-sm transition hover:bg-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-200"
           >
-            {{ editingId ? 'Guardar cambios' : 'Añadir administración' }}
+            {{ editingId ? 'Guardar cambios' : 'Añadir localización' }}
           </button>
         </div>
       </form>

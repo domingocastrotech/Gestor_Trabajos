@@ -1,5 +1,5 @@
 
-import { AfterViewInit, ChangeDetectorRef, Component } from '@angular/core';
+import { Component } from '@angular/core';
 import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../../services/auth.service';
 
@@ -11,46 +11,24 @@ import { AuthService } from '../../../services/auth.service';
   templateUrl: './signin-form.component.html',
   styles: ``
 })
-export class SigninFormComponent implements AfterViewInit {
+export class SigninFormComponent {
   errorMessage = '';
+  isLoading = false;
 
   constructor(
     private authService: AuthService,
-    private router: Router,
-    private cdr: ChangeDetectorRef
+    private router: Router
   ) {}
 
-  ngAfterViewInit(): void {
-    this.waitForGoogleScript();
-  }
-
-  private waitForGoogleScript(): void {
-    const checkGoogle = () => {
-      if (typeof (window as any).google !== 'undefined') {
-        const initialized = this.authService.initializeGoogleSignIn(
-          this.handleCredentialResponse.bind(this),
-        );
-
-        if (!initialized) {
-          this.errorMessage = 'No se pudo cargar Google Sign-In. Comprueba tu conexión e inténtalo de nuevo.';
-          this.cdr.detectChanges();
-        }
-      } else {
-        // Reintentar después de 100ms
-        setTimeout(checkGoogle, 100);
-      }
-    };
-
-    setTimeout(checkGoogle, 0);
-  }
-
-  private handleCredentialResponse(response: any): void {
-    const user = this.authService.handleCredentialResponse(response);
-    if (user) {
-      this.router.navigateByUrl('/');
-      return;
+  async signInWithGoogle(): Promise<void> {
+    try {
+      this.isLoading = true;
+      this.errorMessage = '';
+      await this.authService.signInWithGoogle();
+    } catch (error) {
+      console.error('Error al iniciar sesión:', error);
+      this.errorMessage = 'No se pudo iniciar sesión con Google. Inténtalo de nuevo.';
+      this.isLoading = false;
     }
-
-    this.errorMessage = 'No se pudo iniciar sesión con Google. Inténtalo de nuevo.';
   }
 }

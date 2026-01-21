@@ -26,7 +26,7 @@
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">Empleados</h3>
-          <p class="text-sm text-gray-500 dark:text-gray-400">Alta, edición y baja en memoria (sin BBDD).</p>
+          <p class="text-sm text-gray-500 dark:text-gray-400">Gestión de empleados con Supabase.</p>
         </div>
         <button
           type="button"
@@ -61,12 +61,44 @@
         </tr>
       </thead>
       <tbody class="divide-y divide-gray-100 dark:divide-white/[0.05]">
-        @for (emp of employees; track emp.id) {
+        @if (isLoading) {
+          <tr>
+            <td colspan="5" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+              <div class="flex items-center justify-center gap-2">
+                <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>Cargando empleados...</span>
+              </div>
+            </td>
+          </tr>
+        } @else if (employees.length === 0) {
+          <tr>
+            <td colspan="5" class="px-4 py-8 text-center">
+              <div class="flex flex-col items-center gap-3">
+                <svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                </svg>
+                <div>
+                  <p class="text-gray-700 dark:text-gray-300 font-medium">No hay empleados registrados</p>
+                  <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Si tienes empleados en Supabase pero no aparecen:</p>
+                  <ul class="text-xs text-gray-500 dark:text-gray-400 mt-2 text-left inline-block">
+                    <li>• Verifica que has iniciado sesión correctamente</li>
+                    <li>• Revisa las políticas RLS en la tabla 'employees'</li>
+                    <li>• Asegúrate de que el email del JWT coincide con un empleado</li>
+                  </ul>
+                </div>
+              </div>
+            </td>
+          </tr>
+        } @else {
+          @for (emp of employees; track emp.id) {
         <tr>
           <td class="px-4 py-3 font-medium text-gray-800 sm:px-6 text-start text-theme-sm dark:text-white/90">
             <div class="flex items-center gap-3">
-              <span class="inline-flex h-9 w-9 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-700">
-                <img [src]="emp.avatar" [alt]="emp.name" class="h-full w-full object-cover" referrerpolicy="no-referrer" />
+              <span class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 font-semibold">
+                {{ emp.name[0] }}
               </span>
               <span>{{ emp.name }}</span>
             </div>
@@ -76,8 +108,8 @@
           </td>
           <td class="px-4 py-3 text-gray-500 sm:px-6 text-start text-theme-sm dark:text-gray-400">
             <span class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium"
-              [ngClass]="emp.rol === 'Administrador' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'">
-              {{ emp.rol }}
+              [ngClass]="emp.role === 'Administrador' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'">
+              {{ emp.role }}
             </span>
           </td>
           <td class="px-4 py-3 text-gray-500 sm:px-6 text-start text-theme-sm dark:text-gray-400">
@@ -96,13 +128,16 @@
               </button>
               <button
                 (click)="remove(emp.id)"
-                class="rounded-lg border border-error-200 bg-error-50 px-3 py-1.5 text-xs font-medium text-error-600 hover:bg-error-100 dark:border-error-500/40 dark:bg-error-500/10 dark:text-error-300"
+                [disabled]="!canDelete(emp.id)"
+                [title]="!canDelete(emp.id) ? 'No puedes eliminar tu propio usuario' : ''"
+                class="rounded-lg border border-error-200 bg-error-50 px-3 py-1.5 text-xs font-medium text-error-600 hover:bg-error-100 dark:border-error-500/40 dark:bg-error-500/10 dark:text-error-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-error-50 dark:disabled:hover:bg-error-500/10"
               >
                 Borrar
               </button>
             </div>
           </td>
         </tr>
+        }
         }
       </tbody>
     </table>
@@ -168,13 +203,17 @@
         <div>
           <label class="text-theme-xs font-medium text-gray-600 dark:text-gray-300">Rol</label>
           <select
-            [(ngModel)]="form.rol"
-            name="rol"
-            class="w-full mt-1 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:focus:ring-brand-400/30"
+            [(ngModel)]="form.role"
+            name="role"
+            [disabled]="isEditingCurrentUser()"
+            class="w-full mt-1 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:focus:ring-brand-400/30 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <option value="Usuario">Usuario</option>
             <option value="Administrador">Administrador</option>
           </select>
+          @if (isEditingCurrentUser()) {
+            <p class="text-theme-xs text-gray-500 dark:text-gray-400 mt-1">No puedes cambiar tu propio rol</p>
+          }
         </div>
 
         <div class="sm:col-span-2 flex items-center justify-end gap-3 pt-2">
@@ -193,6 +232,57 @@
           </button>
         </div>
       </form>
+    </div>
+  </div>
+}
+
+<!-- Modal de confirmación de borrado -->
+@if (deleteConfirmation.isOpen) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" (click)="closeDeleteConfirmation()">
+    <div
+      class="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl dark:bg-gray-900"
+      (click)="$event.stopPropagation()"
+    >
+      <div class="flex items-start justify-between gap-4">
+        <div class="flex items-start gap-4">
+          <div class="flex-shrink-0">
+            <svg class="h-6 w-6 text-error-600 dark:text-error-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4v2m0 0a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+          </div>
+          <div>
+            <h4 class="text-lg font-semibold text-gray-900 dark:text-white">Eliminar empleado</h4>
+            <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+              ¿Estás seguro de que deseas eliminar a <strong>{{ deleteConfirmation.employeeName }}</strong>? Esta acción no se puede deshacer.
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          (click)="closeDeleteConfirmation()"
+          class="text-gray-400 transition hover:text-gray-600 dark:hover:text-gray-200"
+          aria-label="Cerrar"
+        >
+          ✕
+        </button>
+      </div>
+
+      <div class="mt-6 flex items-center justify-end gap-3">
+        <button
+          type="button"
+          (click)="closeDeleteConfirmation()"
+          class="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-200 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.06]"
+        >
+          Cancelar
+        </button>
+        <button
+          type="button"
+          (click)="confirmDelete()"
+          class="inline-flex items-center justify-center gap-2 rounded-lg bg-error-600 px-4 py-2 text-sm font-medium text-white shadow-theme-sm transition hover:bg-error-700 focus:outline-none focus:ring-2 focus:ring-error-200 dark:bg-error-500/80 dark:hover:bg-error-600"
+        >
+          Eliminar
+        </button>
+      </div>
     </div>
   </div>
 }

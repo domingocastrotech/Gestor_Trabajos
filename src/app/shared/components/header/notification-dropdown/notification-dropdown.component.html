@@ -74,19 +74,9 @@
             [className]="'w-full text-left text-sm text-gray-700 hover:text-gray-900 flex gap-3 rounded-lg border-b border-gray-100 p-3 px-4.5 py-3 hover:bg-gray-100 dark:border-gray-800 dark:hover:bg-white/5 cursor-pointer'"
           >
             <span class="relative block w-full h-10 rounded-full z-1 max-w-10">
-              @if (notification.avatar) {
-                <img
-                  width="40"
-                  height="40"
-                  [src]="notification.avatar"
-                  alt="User"
-                  class="w-full overflow-hidden rounded-full"
-                />
-              } @else {
-                <span class="flex items-center justify-center w-full h-full text-xl bg-gray-200 rounded-full dark:bg-gray-700">
-                  {{ getNotificationIcon(notification.type) }}
-                </span>
-              }
+              <span class="flex items-center justify-center w-full h-full text-xl bg-gray-200 rounded-full dark:bg-gray-700">
+                {{ getNotificationIcon(notification.type) }}
+              </span>
               @if (!notification.read) {
                 <span class="absolute bottom-0 right-0 z-10 h-2.5 w-full max-w-2.5 rounded-full border-[1.5px] border-white bg-orange-500 dark:border-gray-900"></span>
               }

@@ -5,6 +5,7 @@ import { NotFoundComponent } from './pages/other-page/not-found/not-found.compon
 import { AppLayoutComponent } from './shared/layout/app-layout/app-layout.component';
 import { AlertsComponent } from './pages/ui-elements/alerts/alerts.component';
 import { SignInComponent } from './pages/auth-pages/sign-in/sign-in.component';
+import { AuthCallbackComponent } from './pages/auth-pages/auth-callback/auth-callback.component';
 import { CalenderComponent } from './pages/calender/calender.component';
 import { LocalizacionComponent } from './pages/tables/localizacion/localizacion.component';
 import { authGuard } from './shared/guards/auth.guard';
@@ -53,6 +54,11 @@ export const routes: Routes = [
     path:'signin',
     component:SignInComponent,
     title:'Sign In | Gestor Trabajo'
+  },
+  {
+    path: 'auth/callback',
+    component: AuthCallbackComponent,
+    title: 'Procesando autenticación | Gestor Trabajo'
   },
   // error pages
   {

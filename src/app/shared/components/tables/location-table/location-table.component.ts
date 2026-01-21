@@ -1,17 +1,10 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AlertComponent } from '../../ui/alert/alert.component';
+import { LocationService, Location } from '../../../services/location.service';
 
-interface Office {
-  id: number;
-  name: string;
-  address: string;
-  city: string;
-  phone: string;
-}
-
-interface OfficeForm extends Omit<Office, 'id'> {}
+interface LocationForm extends Omit<Location, 'id' | 'created_at'> {}
 
 interface AlertItem {
   id: number;
@@ -27,22 +20,44 @@ interface AlertItem {
   templateUrl: './location-table.component.html',
   styles: ``
 })
-export class LocationTableComponent {
-  offices: Office[] = [
-    { id: 1, name: 'Sede Central', address: 'Av. Principal 123', city: 'Madrid', phone: '+34 910 000 001' },
-    { id: 2, name: 'Oficina Norte', address: 'Calle Norte 45', city: 'Bilbao', phone: '+34 944 000 002' },
-    { id: 3, name: 'Centro Operativo', address: 'Gran Vía 210', city: 'Barcelona', phone: '+34 933 000 003' },
-  ];
-
-  form: OfficeForm = this.getEmptyForm();
+export class LocationTableComponent implements OnInit {
+  locations: Location[] = [];
+  form: LocationForm = this.getEmptyForm();
   editingId: number | null = null;
   showModal = false;
+  isLoading = false;
 
   alerts: AlertItem[] = [];
   private alertId = 0;
 
+  // Modal de confirmación de borrado
+  deleteConfirmation: { isOpen: boolean; locationId: number | null; locationName: string } = {
+    isOpen: false,
+    locationId: null,
+    locationName: ''
+  };
+
+  constructor(private locationService: LocationService) {}
+
+  ngOnInit() {
+    this.loadLocations();
+  }
+
+  async loadLocations() {
+    try {
+      this.isLoading = true;
+      this.locations = await this.locationService.getAll();
+      console.log('[LocationTable] Ubicaciones cargadas:', this.locations.length);
+    } catch (error: any) {
+      console.error('[LocationTable] Error cargando ubicaciones:', error);
+      this.showAlert('error', 'Error al cargar', 'No se pudieron cargar las ubicaciones. Verifica los permisos RLS.');
+    } finally {
+      this.isLoading = false;
+    }
+  }
+
   get modalTitle(): string {
-    return this.editingId ? 'Editar administración' : 'Nueva administración';
+    return this.editingId ? 'Editar localización' : 'Nueva localización';
   }
 
   startAdd() {
@@ -50,40 +65,89 @@ export class LocationTableComponent {
     this.showModal = true;
   }
 
-  edit(office: Office) {
-    this.form = { name: office.name, address: office.address, city: office.city, phone: office.phone };
-    this.editingId = office.id;
+  edit(location: Location) {
+    this.form = { name: location.name, address: location.address, city: location.city };
+    this.editingId = location.id;
     this.showModal = true;
   }
 
-  save() {
-    if (!this.form.name || !this.form.address || !this.form.city || !this.form.phone) {
+  async save() {
+    if (!this.form.name || !this.form.address || !this.form.city) {
       this.showAlert('warning', 'Faltan datos', 'Completa todos los campos antes de guardar.');
       return;
     }
 
-    if (this.editingId !== null) {
-      this.offices = this.offices.map(o => (o.id === this.editingId ? { ...o, ...this.form } : o));
-      this.showAlert('success', 'Administración actualizada', `${this.form.name} ha sido actualizada.`);
-    } else {
-      const nextId = Math.max(0, ...this.offices.map(o => o.id)) + 1;
-      this.offices = [...this.offices, { ...this.form, id: nextId }];
-      this.showAlert('success', 'Administración agregada', `${this.form.name} se añadió correctamente.`);
-    }
+    try {
+      this.isLoading = true;
 
-    this.closeModal();
+      if (this.editingId !== null) {
+        // Actualizar
+        await this.locationService.update(this.editingId, this.form);
+        this.showAlert('success', 'Localización actualizada', `${this.form.name} ha sido actualizada.`);
+      } else {
+        // Crear
+        await this.locationService.create(this.form);
+        this.showAlert('success', 'Localización agregada', `${this.form.name} se añadió correctamente.`);
+      }
+
+      await this.loadLocations();
+      this.closeModal();
+    } catch (error: any) {
+      console.error('[LocationTable] Error guardando:', error);
+      this.showAlert('error', 'Error al guardar', error.message || 'No se pudo guardar la localización.');
+    } finally {
+      this.isLoading = false;
+    }
   }
 
   remove(id: number) {
-    const removed = this.offices.find(o => o.id === id);
-    this.offices = this.offices.filter(o => o.id !== id);
-    if (removed) {
-      this.showAlert('warning', 'Administración eliminada', `${removed.name} fue eliminada.`);
+    const location = this.locations.find(loc => loc.id === id);
+    if (location) {
+      this.openDeleteConfirmation(id, location.name);
     }
+  }
 
-    if (this.editingId === id) {
-      this.resetForm();
-    }
+  openDeleteConfirmation(id: number, name: string) {
+    this.deleteConfirmation = {
+      isOpen: true,
+      locationId: id,
+      locationName: name
+    };
+  }
+
+  closeDeleteConfirmation() {
+    this.deleteConfirmation = {
+      isOpen: false,
+      locationId: null,
+      locationName: ''
+    };
+  }
+
+  confirmDelete() {
+    if (this.deleteConfirmation.locationId === null) return;
+
+    const id = this.deleteConfirmation.locationId;
+    const name = this.deleteConfirmation.locationName;
+
+    (async () => {
+      try {
+        this.isLoading = true;
+        await this.locationService.delete(id);
+        this.showAlert('success', 'Localización eliminada', `"${name}" fue eliminada correctamente.`);
+        await this.loadLocations();
+
+        if (this.editingId === id) {
+          this.resetForm();
+        }
+
+        this.closeDeleteConfirmation();
+      } catch (error: any) {
+        console.error('[LocationTable] Error eliminando:', error);
+        this.showAlert('error', 'Error al eliminar', error.message || 'No se pudo eliminar la localización.');
+      } finally {
+        this.isLoading = false;
+      }
+    })();
   }
 
   closeModal() {
@@ -96,8 +160,8 @@ export class LocationTableComponent {
     this.editingId = null;
   }
 
-  private getEmptyForm(): OfficeForm {
-    return { name: '', address: '', city: '', phone: '' };
+  private getEmptyForm(): LocationForm {
+    return { name: '', address: '', city: '' };
   }
 
   private showAlert(variant: AlertItem['variant'], title: string, message: string) {

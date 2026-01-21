@@ -16,7 +16,6 @@ interface Employee {
   id: number;
   name: string;
   email: string;
-  avatar: string;
   color: string;
   rol: 'Administrador' | 'Usuario';
 }
@@ -26,7 +25,6 @@ interface Location {
   name: string;
   address: string;
   city: string;
-  phone: string;
 }
 
 interface AlertItem {
@@ -40,7 +38,6 @@ interface VacationRequest {
   id: number;
   employeeId: number;
   employeeName: string;
-  employeeAvatar: string;
   startDate: string;
   endDate: string;
   type: 'vacation' | 'day-off';
@@ -55,7 +52,6 @@ interface CalendarEvent extends EventInput {
     location?: string;
     employeeId?: number;
     employeeName?: string;
-    employeeAvatar?: string;
     employeeColor?: string;
     startTime?: string;
     endTime?: string;
@@ -298,7 +294,7 @@ export class CalenderComponent {
     title: string;
     location?: string;
     employeeName?: string;
-    employeeAvatar?: string;
+
     employeeColor?: string;
     startTime?: string;
     endTime?: string;
@@ -329,9 +325,9 @@ export class CalenderComponent {
                 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
   locations: Location[] = [
-    { id: 1, name: 'Sede Central', address: 'Av. Principal 123', city: 'Madrid', phone: '+34 910 000 001' },
-    { id: 2, name: 'Oficina Norte', address: 'Calle Norte 45', city: 'Bilbao', phone: '+34 944 000 002' },
-    { id: 3, name: 'Centro Operativo', address: 'Gran Vía 210', city: 'Barcelona', phone: '+34 933 000 003' },
+    { id: 1, name: 'Sede Central', address: 'Av. Principal 123', city: 'Madrid' },
+    { id: 2, name: 'Oficina Norte', address: 'Calle Norte 45', city: 'Bilbao' },
+    { id: 3, name: 'Centro Operativo', address: 'Gran Vía 210', city: 'Barcelona' },
   ];
 
   employees: Employee[] = [
@@ -339,7 +335,6 @@ export class CalenderComponent {
       id: 1,
       name: 'Ana García',
       email: 'ana.garcia@empresa.com',
-      avatar: '/images/user/user-01.png',
       color: '#10b981',
       rol: 'Administrador',
     },
@@ -347,7 +342,6 @@ export class CalenderComponent {
       id: 2,
       name: 'Luis Pérez',
       email: 'luis.perez@empresa.com',
-      avatar: '/images/user/user-02.png',
       color: '#6366f1',
       rol: 'Usuario',
     },
@@ -355,7 +349,6 @@ export class CalenderComponent {
       id: 3,
       name: 'María López',
       email: 'maria.lopez@empresa.com',
-      avatar: '/images/user/user-03.png',
       color: '#f97316',
       rol: 'Usuario',
     },
@@ -382,7 +375,7 @@ export class CalenderComponent {
         id: 1,
         employeeId: 2,
         employeeName: 'Luis Pérez',
-        employeeAvatar: '/images/user/user-02.png',
+
         startDate: '2026-01-20',
         endDate: '2026-01-24',
         type: 'vacation',
@@ -394,7 +387,7 @@ export class CalenderComponent {
         id: 2,
         employeeId: 3,
         employeeName: 'María López',
-        employeeAvatar: '/images/user/user-03.png',
+
         startDate: '2026-01-18',
         endDate: '2026-01-18',
         type: 'day-off',
@@ -413,8 +406,7 @@ export class CalenderComponent {
           type: 'vacation-request',
           title: 'Nueva solicitud de vacaciones',
           message: `${request.employeeName} ha solicitado ${request.type === 'vacation' ? 'vacaciones' : 'un día libre'} del ${this.formatDate(request.startDate)} al ${this.formatDate(request.endDate)}`,
-          avatar: request.employeeAvatar,
-          employeeName: request.employeeName,
+          recipient_email: this.currentUser?.email || '',
           data: { requestId: request.id }
         });
       });
@@ -437,7 +429,7 @@ export class CalenderComponent {
           location: 'Sede Central',
           employeeId: 1,
           employeeName: 'Ana García',
-          employeeAvatar: '/images/user/user-01.png',
+
           employeeColor: '#10b981',
           startTime: '09:00',
           endTime: '11:00'
@@ -455,7 +447,7 @@ export class CalenderComponent {
           location: 'Sede Central',
           employeeId: 1,
           employeeName: 'Ana García',
-          employeeAvatar: '/images/user/user-01.png',
+
           employeeColor: '#10b981',
           startTime: '09:00',
           endTime: '10:00'
@@ -472,7 +464,7 @@ export class CalenderComponent {
           location: 'Oficina Norte',
           employeeId: 2,
           employeeName: 'Luis Pérez',
-          employeeAvatar: '/images/user/user-02.png',
+
           employeeColor: '#6366f1',
           startTime: '10:00',
           endTime: '11:00'
@@ -489,7 +481,7 @@ export class CalenderComponent {
           location: 'Centro Operativo',
           employeeId: 3,
           employeeName: 'María López',
-          employeeAvatar: '/images/user/user-03.png',
+
           employeeColor: '#f97316',
           startTime: '11:00',
           endTime: '12:00'
@@ -506,7 +498,7 @@ export class CalenderComponent {
           location: 'Sede Central',
           employeeId: 1,
           employeeName: 'Ana García',
-          employeeAvatar: '/images/user/user-01.png',
+
           employeeColor: '#10b981',
           startTime: '12:00',
           endTime: '13:00'
@@ -523,7 +515,7 @@ export class CalenderComponent {
           location: 'Oficina Norte',
           employeeId: 2,
           employeeName: 'Luis Pérez',
-          employeeAvatar: '/images/user/user-02.png',
+
           employeeColor: '#6366f1',
           startTime: '13:00',
           endTime: '14:00'
@@ -540,7 +532,7 @@ export class CalenderComponent {
           location: 'Centro Operativo',
           employeeId: 3,
           employeeName: 'María López',
-          employeeAvatar: '/images/user/user-03.png',
+
           employeeColor: '#f97316',
           startTime: '14:00',
           endTime: '15:00'
@@ -557,7 +549,7 @@ export class CalenderComponent {
           location: 'Sede Central',
           employeeId: 1,
           employeeName: 'Ana García',
-          employeeAvatar: '/images/user/user-01.png',
+
           employeeColor: '#10b981',
           startTime: '15:00',
           endTime: '16:00'
@@ -574,7 +566,7 @@ export class CalenderComponent {
           location: 'Oficina Norte',
           employeeId: 2,
           employeeName: 'Luis Pérez',
-          employeeAvatar: '/images/user/user-02.png',
+
           employeeColor: '#6366f1',
           startTime: '16:00',
           endTime: '17:00'
@@ -591,7 +583,7 @@ export class CalenderComponent {
           location: 'Centro Operativo',
           employeeId: 3,
           employeeName: 'María López',
-          employeeAvatar: '/images/user/user-03.png',
+
           employeeColor: '#f97316',
           startTime: '17:00',
           endTime: '18:00'
@@ -608,7 +600,7 @@ export class CalenderComponent {
           location: 'Sede Central',
           employeeId: 1,
           employeeName: 'Ana García',
-          employeeAvatar: '/images/user/user-01.png',
+
           employeeColor: '#10b981',
           startTime: '18:00',
           endTime: '19:00'
@@ -625,7 +617,7 @@ export class CalenderComponent {
           location: 'Oficina Norte',
           employeeId: 2,
           employeeName: 'Luis Pérez',
-          employeeAvatar: '/images/user/user-02.png',
+
           employeeColor: '#6366f1',
           startTime: '10:00',
           endTime: '12:00'
@@ -642,7 +634,7 @@ export class CalenderComponent {
           location: 'Centro Operativo',
           employeeId: 3,
           employeeName: 'María López',
-          employeeAvatar: '/images/user/user-03.png',
+
           employeeColor: '#f97316',
           startTime: '14:00',
           endTime: '16:00'
@@ -724,7 +716,7 @@ export class CalenderComponent {
         location: event.extendedProps['location'],
         employeeId: event.extendedProps['employeeId'],
         employeeName: event.extendedProps['employeeName'],
-        employeeAvatar: event.extendedProps['employeeAvatar'],
+
         employeeColor: event.extendedProps['employeeColor'],
         startTime: event.extendedProps['startTime'],
         endTime: event.extendedProps['endTime']
@@ -821,7 +813,7 @@ export class CalenderComponent {
           location: this.eventLocation,
           employeeId: this.eventEmployeeId,
           employeeName: employee?.name,
-          employeeAvatar: employee?.avatar,
+
           employeeColor: employee?.color,
           startTime: this.eventStartTime,
           endTime: this.eventEndTime
@@ -847,7 +839,7 @@ export class CalenderComponent {
           location: this.eventLocation,
           employeeId: this.eventEmployeeId,
           employeeName: employee?.name,
-          employeeAvatar: employee?.avatar,
+
           employeeColor: employee?.color,
           startTime: this.eventStartTime,
           endTime: this.eventEndTime
@@ -862,8 +854,7 @@ export class CalenderComponent {
           type: 'task',
           title: `Nueva tarea asignada`,
           message: `${this.currentUser.name} te ha asignado una tarea: "${generatedTitle}"`,
-          avatar: this.currentUser.avatar,
-          employeeName: this.currentUser.name,
+          recipient_email: employee.email,
           data: { eventId: newEvent.id }
         });
       }
@@ -928,7 +919,7 @@ export class CalenderComponent {
       title: ev.title,
       location: ev.extendedProps['location'],
       employeeName: ev.extendedProps['employeeName'],
-      employeeAvatar: ev.extendedProps['employeeAvatar'],
+
       employeeColor: ev.extendedProps['employeeColor'],
       startTime: ev.extendedProps['startTime'],
       endTime: ev.extendedProps['endTime'],
@@ -959,7 +950,7 @@ export class CalenderComponent {
         location: ev.extendedProps['location'],
         employeeId: ev.extendedProps['employeeId'],
         employeeName: ev.extendedProps['employeeName'],
-        employeeAvatar: ev.extendedProps['employeeAvatar'],
+
         employeeColor: ev.extendedProps['employeeColor'],
         startTime: ev.extendedProps['startTime'],
         endTime: ev.extendedProps['endTime'],
@@ -1048,7 +1039,6 @@ export class CalenderComponent {
   }
 
   renderEventContent(eventInfo: any) {
-    const avatar = eventInfo.event.extendedProps.employeeAvatar;
     const employeeName = eventInfo.event.extendedProps.employeeName;
     const location = eventInfo.event.extendedProps.location;
     const startTime = eventInfo.event.extendedProps.startTime;
@@ -1065,7 +1055,6 @@ export class CalenderComponent {
         html: `
           <div class="flex items-center justify-center gap-1 p-2 text-xs font-bold" style="background-color: ${bgColor}; border-radius: 4px; color: white;">
             <span style="font-size: 16px;">${icon}</span>
-            ${avatar ? `<img src="${avatar}" alt="${employeeName}" class="w-4 h-4 rounded-full object-cover flex-shrink-0" referrerpolicy="no-referrer" />` : ''}
             <span class="truncate">${eventInfo.event.title}</span>
           </div>
         `
@@ -1077,7 +1066,6 @@ export class CalenderComponent {
       html: `
         <div class="flex flex-col gap-0.5 p-1 text-xs" style="background-color: ${bgColor}; border-radius: 4px; color: white;">
           <div class="flex items-center gap-1 min-h-[20px]">
-            ${avatar ? `<img src="${avatar}" alt="${employeeName}" class="w-4 h-4 rounded-full object-cover flex-shrink-0" referrerpolicy="no-referrer" />` : ''}
             <span class="font-semibold truncate">${employeeName || 'Tarea'}</span>
           </div>
           ${location ? `<div class="truncate text-white/90">📍 ${location}</div>` : ''}
@@ -1261,7 +1249,7 @@ export class CalenderComponent {
       id: this.vacationRequests.length + 1,
       employeeId: this.currentUser.id,
       employeeName: this.currentUser.name,
-      employeeAvatar: this.currentUser.avatar,
+
       startDate: this.vacationStartDate,
       endDate: this.vacationEndDate,
       type: this.vacationType,
@@ -1280,8 +1268,7 @@ export class CalenderComponent {
           type: 'vacation-request',
           title: 'Nueva solicitud de vacaciones',
           message: `${this.currentUser!.name} ha solicitado ${this.vacationType === 'vacation' ? 'vacaciones' : 'un día libre'} del ${this.formatDate(this.vacationStartDate)} al ${this.formatDate(this.vacationEndDate)}`,
-          avatar: this.currentUser!.avatar,
-          employeeName: this.currentUser!.name,
+          recipient_email: admin.email,
           data: { requestId: newRequest.id }
         });
       });
@@ -1299,13 +1286,13 @@ export class CalenderComponent {
     this.addVacationToCalendar(request);
 
     // Notificar al empleado
-    if (this.currentUser) {
+    const requestEmployee = this.employees.find(e => e.id === request.employeeId);
+    if (this.currentUser && requestEmployee) {
       this.notificationService.addNotification({
         type: 'vacation-request',
         title: 'Solicitud aprobada',
         message: `Tu solicitud de ${request.type === 'vacation' ? 'vacaciones' : 'día libre'} del ${this.formatDate(request.startDate)} al ${this.formatDate(request.endDate)} ha sido aprobada`,
-        avatar: this.currentUser.avatar,
-        employeeName: 'Administrador',
+        recipient_email: requestEmployee.email,
         data: { requestId: request.id }
       });
     }
@@ -1320,13 +1307,13 @@ export class CalenderComponent {
     request.status = 'rejected';
 
     // Notificar al empleado
-    if (this.currentUser) {
+    const requestEmployee = this.employees.find(e => e.id === request.employeeId);
+    if (this.currentUser && requestEmployee) {
       this.notificationService.addNotification({
         type: 'vacation-request',
         title: 'Solicitud rechazada',
         message: `Tu solicitud de ${request.type === 'vacation' ? 'vacaciones' : 'día libre'} del ${this.formatDate(request.startDate)} al ${this.formatDate(request.endDate)} ha sido rechazada`,
-        avatar: this.currentUser.avatar,
-        employeeName: 'Administrador',
+        recipient_email: requestEmployee.email,
         data: { requestId: request.id }
       });
     }
@@ -1373,7 +1360,7 @@ export class CalenderComponent {
         calendar: 'Vacation',
         employeeId: request.employeeId,
         employeeName: request.employeeName,
-        employeeAvatar: request.employeeAvatar,
+
         employeeColor: employee?.color,
         isVacation: true,
         vacationType: request.type
