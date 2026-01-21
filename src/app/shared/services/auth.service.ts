@@ -2,6 +2,7 @@ import { Inject, Injectable, PLATFORM_ID, signal, Injector } from '@angular/core
 import { Router } from '@angular/router';
 import { isPlatformBrowser } from '@angular/common';
 import { SupabaseService } from './supabase.service';
+import { environment } from '../../../environments/environment';
 
 export interface GoogleUser {
   id: string;
@@ -59,10 +60,16 @@ export class AuthService {
 
     try {
       console.log('[AuthService] Iniciando autenticación con Google vía Supabase...');
+      const redirectUrl = environment.production
+        ? `${environment.appUrl}/auth/callback`
+        : `${window.location.origin}/auth/callback`;
+
+      console.log('[AuthService] Redirect URL configurada:', redirectUrl);
+
       const { data, error } = await this.supabase.supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: redirectUrl,
         },
       });
 
