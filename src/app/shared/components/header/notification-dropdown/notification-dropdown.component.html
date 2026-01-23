@@ -61,50 +61,90 @@
       </button>
     </div>
     <ul class="flex flex-col h-auto overflow-y-auto custom-scrollbar">
-      @if (notifications.length === 0) {
+      @if (recentNotifications.length === 0) {
         <li class="py-8 text-center text-gray-500 dark:text-gray-400">
           <span class="block mb-2 text-4xl">🔔</span>
           <span class="text-sm">No tienes notificaciones</span>
         </li>
       }
-      @for (notification of notifications; track notification.id) {
-        <li>
-          <app-dropdown-item
-            (itemClick)="clearNotification(notification.id)"
-            [className]="'w-full text-left text-sm text-gray-700 hover:text-gray-900 flex gap-3 rounded-lg border-b border-gray-100 p-3 px-4.5 py-3 hover:bg-gray-100 dark:border-gray-800 dark:hover:bg-white/5 cursor-pointer'"
-          >
-            <span class="relative block w-full h-10 rounded-full z-1 max-w-10">
-              <span class="flex items-center justify-center w-full h-full text-xl bg-gray-200 rounded-full dark:bg-gray-700">
-                {{ getNotificationIcon(notification.type) }}
-              </span>
-              @if (!notification.read) {
-                <span class="absolute bottom-0 right-0 z-10 h-2.5 w-full max-w-2.5 rounded-full border-[1.5px] border-white bg-orange-500 dark:border-gray-900"></span>
-              }
-            </span>
-            <span class="block flex-1">
-              <span class="mb-1.5 block text-theme-sm text-gray-500 dark:text-gray-400">
-                <span class="font-medium text-gray-800 dark:text-white/90">
-                  {{ notification.title }}
+      @for (notification of recentNotifications; track notification.id) {
+        <li class="group/item">
+          <div class="flex items-center gap-2 w-full border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-500/10 transition-colors">
+            <app-dropdown-item
+              (itemClick)="markNotificationAsRead(notification.id)"
+              [className]="'flex-1 text-left text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800/20 flex gap-3 rounded-l-lg p-3 px-4.5 py-3'"
+            >
+              <span class="relative block w-full h-10 rounded-full z-1 max-w-10">
+                <span class="flex items-center justify-center w-full h-full text-xl bg-gray-200 rounded-full dark:bg-gray-700">
+                  {{ getNotificationIcon(notification.type) }}
                 </span>
-                <span class="block mt-1">{{ notification.message }}</span>
+                @if (!notification.read) {
+                  <span class="absolute bottom-0 right-0 z-10 h-2.5 w-full max-w-2.5 rounded-full border-[1.5px] border-white bg-orange-500 dark:border-gray-900"></span>
+                }
               </span>
-              <span class="flex items-center gap-2 text-gray-500 text-theme-xs dark:text-gray-400">
-                <span>{{ notification.type === 'task' ? 'Tarea' : 'Vacaciones' }}</span>
-                <span class="w-1 h-1 bg-gray-400 rounded-full"></span>
-                <span>{{ getTimeAgo(notification.timestamp) }}</span>
+              <span class="block flex-1">
+                <span class="mb-1.5 block text-theme-sm transition-colors" [class]="notification.read ? 'text-white dark:text-white group-hover/item:text-white dark:group-hover/item:text-white' : 'text-gray-700 dark:text-gray-300 group-hover/item:text-white dark:group-hover/item:text-white'">
+                  <span class="font-bold" [class]="notification.read ? 'text-white dark:text-white group-hover/item:text-white dark:group-hover/item:text-white' : 'text-gray-800 dark:text-white group-hover/item:text-white dark:group-hover/item:text-white'">
+                    {{ notification.title }}
+                  </span>
+                  <span class="block mt-1">{{ notification.message }}</span>
+                </span>
+                <span class="flex items-center gap-2 text-theme-xs transition-colors" [class]="notification.read ? 'text-white dark:text-white group-hover/item:text-white dark:group-hover/item:text-white' : 'text-gray-600 dark:text-gray-400 group-hover/item:text-white dark:group-hover/item:text-white'">
+                  <span>{{ notification.type === 'task' ? 'Tarea' : 'Vacaciones' }}</span>
+                  <span class="w-1 h-1 rounded-full" [class]="notification.read ? 'bg-white group-hover/item:bg-white' : 'bg-gray-400 group-hover/item:bg-white'"></span>
+                  <span>{{ getTimeAgo(notification.timestamp) }}</span>
+                </span>
               </span>
-            </span>
-          </app-dropdown-item>
+            </app-dropdown-item>
+            <button
+              (click)="markNotificationAsRead(notification.id)"
+              class="group/btn flex-shrink-0 p-2 text-gray-400 transition-colors hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 dark:hover:text-green-400"
+              [title]="'Marcar como visto'"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+              </svg>
+            </button>
+          </div>
         </li>
       }
     </ul>
     <a
-      routerLink="/"
+      routerLink="/notifications"
+      (click)="closeDropdown()"
       class="block px-4 py-2 mt-3 text-sm font-medium text-center text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700"
     >
       Ver todas las notificaciones
     </a>
   </app-dropdown>
+
+  <!-- Modal de confirmación de eliminación -->
+  @if (showDeleteConfirm) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 dark:bg-black/70">
+      <div class="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-6 max-w-sm mx-4">
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+          ¿Eliminar notificación?
+        </h3>
+        <p class="text-sm text-gray-600 dark:text-gray-400 mb-6">
+          Esta acción no se puede deshacer.
+        </p>
+        <div class="flex gap-3 justify-end">
+          <button
+            (click)="closeDeleteConfirm()"
+            class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors"
+          >
+            Cancelar
+          </button>
+          <button
+            (click)="confirmDelete()"
+            class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+          >
+            Eliminar
+          </button>
+        </div>
+      </div>
+    </div>
+  }
 </div>
 
 <!-- block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 flex gap-3 rounded-lg border-b border-gray-100 p-3 px-4.5 py-3 hover:bg-gray-100 dark:border-gray-800 dark:hover:bg-white/5 -->

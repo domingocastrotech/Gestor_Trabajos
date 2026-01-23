@@ -40,3 +40,5 @@ testem.log
 # System files
 .DS_Store
 Thumbs.db
+.saberdelproyecto.md
+supabase/.temp/cli-latest

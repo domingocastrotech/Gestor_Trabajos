@@ -19,6 +19,9 @@
     "target": "ES2022",
     "module": "ES2022"
   },
+  "exclude": [
+    "supabase/**"
+  ],
   "angularCompilerOptions": {
     "enableI18nLegacyMessageIdFormat": false,
     "strictInjectionParameters": true,

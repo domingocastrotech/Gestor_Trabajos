@@ -1,0 +1,78 @@
+<div class="relative flex h-screen items-center justify-center overflow-hidden bg-white dark:bg-gray-dark">
+  <!-- Background decoration -->
+  <div class="absolute inset-0 -z-10">
+    <div class="absolute top-0 left-1/4 h-96 w-96 rounded-full bg-brand-500/10 blur-3xl"></div>
+    <div class="absolute bottom-0 right-1/4 h-96 w-96 rounded-full bg-purple-500/10 blur-3xl"></div>
+  </div>
+
+  <div class="z-10 mx-auto max-w-2xl px-4 text-center">
+    <!-- Icon -->
+    <div class="mb-8 flex justify-center">
+      <div class="relative">
+        <div class="flex h-32 w-32 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/20">
+          <svg class="h-16 w-16 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+          </svg>
+        </div>
+        <div class="absolute -right-2 -bottom-2 flex h-12 w-12 items-center justify-center rounded-full bg-white dark:bg-gray-800 border-4 border-red-100 dark:border-red-900/20">
+          <svg class="h-6 w-6 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- Title -->
+    <h1 class="mb-4 text-4xl font-bold text-gray-900 dark:text-white sm:text-5xl">
+      Acceso No Autorizado
+    </h1>
+
+    <!-- Message -->
+    <div class="mb-8 space-y-4">
+      <p class="text-lg text-gray-600 dark:text-gray-400">
+        Lo sentimos, no estás registrado como empleado en el sistema.
+      </p>
+      @if (authService.user) {
+        <div class="mx-auto max-w-md rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800">
+          <p class="text-sm text-gray-600 dark:text-gray-400">
+            Has iniciado sesión como:
+          </p>
+          <div class="mt-2 flex items-center justify-center gap-3">
+            @if (authService.user.picture) {
+              <img
+                [src]="authService.user.picture"
+                [alt]="authService.user.name"
+                class="h-10 w-10 rounded-full border-2 border-gray-300 dark:border-gray-600"
+              />
+            }
+            <div class="text-left">
+              <p class="font-medium text-gray-900 dark:text-white">{{ authService.user.name }}</p>
+              <p class="text-sm text-gray-500 dark:text-gray-400">{{ authService.user.email }}</p>
+            </div>
+          </div>
+        </div>
+      }
+      <p class="text-base text-gray-700 dark:text-gray-300">
+        Si crees que esto es un error, por favor contacta con un administrador o supervisor del sistema.
+      </p>
+    </div>
+
+    <!-- Actions -->
+    <div class="flex flex-col items-center justify-center gap-4 sm:flex-row">
+      <button
+        (click)="signOut()"
+        class="inline-flex items-center gap-2 rounded-lg bg-red-600 px-6 py-3 text-sm font-medium text-white transition hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+      >
+        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+        </svg>
+        Cerrar Sesión
+      </button>
+    </div>
+
+    <!-- Footer -->
+    <div class="mt-12 text-sm text-gray-500 dark:text-gray-400">
+      <p>© {{ currentYear }} Gestor de Trabajo. Todos los derechos reservados.</p>
+    </div>
+  </div>
+</div>

@@ -32,10 +32,14 @@ export class NotificationService {
     try {
       const session = await this.supabase.getSession();
       if (!session?.user?.email) {
+        console.log('[NotificationService] No hay sesión activa, limpiando notificaciones');
         this.notificationsSubject.next([]);
         return;
       }
 
+      console.log('[NotificationService] Cargando notificaciones para:', session.user.email);
+
+      // Cargar solo las notificaciones del usuario actual basándose en su email
       const { data, error } = await this.supabase.supabase
         .from('notifications')
         .select('*')
@@ -56,9 +60,10 @@ export class NotificationService {
         created_at: n.created_at
       }));
 
+      console.log('[NotificationService] Notificaciones cargadas:', notifications.length);
       this.notificationsSubject.next(notifications);
     } catch (error) {
-      console.error('Error loading notifications:', error);
+      console.error('[NotificationService] Error loading notifications:', error);
     }
   }
 
@@ -76,21 +81,39 @@ export class NotificationService {
   }
 
   async addNotification(notification: Omit<Notification, 'id' | 'timestamp' | 'read' | 'created_at'>): Promise<void> {
+    console.log('[NotificationService] 📤 Intentando crear notificación...');
+    console.log('[NotificationService] Datos de notificación:', notification);
+
     try {
+      const payload = {
+        type: notification.type,
+        title: notification.title,
+        message: notification.message,
+        recipient_email: notification.recipient_email,
+        read: false,
+        data: notification.data
+      };
+
+      console.log('[NotificationService] Payload a insertar:', payload);
+
       const { data, error } = await this.supabase.supabase
         .from('notifications')
-        .insert({
-          type: notification.type,
-          title: notification.title,
-          message: notification.message,
-          recipient_email: notification.recipient_email,
-          read: false,
-          data: notification.data
-        })
+        .insert(payload)
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('[NotificationService] ❌ Error de Supabase al insertar:', error);
+        console.error('[NotificationService] Error details:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint
+        });
+        throw error;
+      }
+
+      console.log('[NotificationService] ✅ Notificación insertada en BD:', data);
 
       const newNotification: Notification = {
         id: data.id,
@@ -106,8 +129,9 @@ export class NotificationService {
 
       const currentNotifications = this.notificationsSubject.value;
       this.notificationsSubject.next([newNotification, ...currentNotifications]);
+      console.log('[NotificationService] ✅ Notificación añadida al observable. Total:', currentNotifications.length + 1);
     } catch (error) {
-      console.error('Error adding notification:', error);
+      console.error('[NotificationService] ❌ Error adding notification:', error);
       throw error;
     }
   }

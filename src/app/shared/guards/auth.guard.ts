@@ -13,11 +13,20 @@ export const authGuard: CanActivateFn = async (): Promise<boolean | UrlTree> => 
   const isAuth = auth.isAuthenticated();
   console.log('[AuthGuard] isAuthenticated:', isAuth);
 
-  if (isAuth) {
-    console.log('[AuthGuard] User authenticated, allowing access');
-    return true;
+  if (!isAuth) {
+    console.log('[AuthGuard] User not authenticated, redirecting to /signin');
+    return router.createUrlTree(['/signin']);
   }
 
-  console.log('[AuthGuard] User not authenticated, redirecting to /signin');
-  return router.createUrlTree(['/signin']);
+  // Verificar si está registrado como empleado
+  const isEmp = auth.isEmployee();
+  console.log('[AuthGuard] isEmployee:', isEmp);
+
+  if (!isEmp) {
+    console.log('[AuthGuard] User authenticated but not registered as employee, redirecting to /unauthorized');
+    return router.createUrlTree(['/unauthorized']);
+  }
+
+  console.log('[AuthGuard] User authenticated and registered as employee, allowing access');
+  return true;
 };

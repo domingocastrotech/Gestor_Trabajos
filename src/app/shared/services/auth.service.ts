@@ -2,7 +2,7 @@ import { Inject, Injectable, PLATFORM_ID, signal, Injector } from '@angular/core
 import { Router } from '@angular/router';
 import { isPlatformBrowser } from '@angular/common';
 import { SupabaseService } from './supabase.service';
-import { environment } from '../../../environments/environment';
+import { environment } from '../../../environments/environment.development';
 
 export interface GoogleUser {
   id: string;
@@ -18,6 +18,7 @@ export interface Employee {
   color: string;
   role: string;
   is_active: boolean;
+  avatar?: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -49,6 +50,13 @@ export class AuthService {
     const u = this.userSignal();
     const result = !!(u && u.id && u.email);
     console.log('[AuthService] isAuthenticated check:', result, 'User:', u);
+    return result;
+  }
+
+  isEmployee(): boolean {
+    const emp = this.employeeSignal();
+    const result = !!(emp && emp.id && emp.email);
+    console.log('[AuthService] isEmployee check:', result, 'Employee:', emp);
     return result;
   }
 
@@ -111,7 +119,7 @@ export class AuthService {
         id: supabaseUser.id,
         email: supabaseUser.email || '',
         name: supabaseUser.user_metadata?.['full_name'] || supabaseUser.user_metadata?.['name'] || '',
-        picture: supabaseUser.user_metadata?.['avatar_url'] || supabaseUser.user_metadata?.['picture'],
+        picture: this.extractUserPicture(supabaseUser),
       };
 
       this.userSignal.set(googleUser);
@@ -149,7 +157,7 @@ export class AuthService {
         .from('employees')
         .select('*')
         .eq('email', email)
-        .single();
+        .maybeSingle();
 
       if (findError) {
         console.error('[AuthService] ERROR - No se pudo obtener el empleado:', findError.message);
@@ -159,12 +167,62 @@ export class AuthService {
         return;
       }
 
+      // Verificar si el empleado existe
+      if (!employeeData) {
+        console.warn('[AuthService] ⚠️ Usuario de Google válido pero NO está registrado como empleado');
+        console.warn('[AuthService] Email:', email);
+        this.employeeSignal.set(null);
+        return;
+      }
+
       console.log('[AuthService] ✓ Employee encontrado:', employeeData?.email);
+
+      // Actualizar el avatar si el empleado no tiene uno, usa placeholder o está roto, y el usuario de Google sí
+      const googleUser = this.userSignal();
+      const isPlaceholder = !employeeData?.avatar || employeeData.avatar.includes('/images/user/');
+      const isBroken = await this.isAvatarBroken(employeeData?.avatar);
+      if (employeeData && googleUser?.picture && (isPlaceholder || isBroken)) {
+        console.log('[AuthService] Actualizando avatar del empleado desde Google...');
+        const { error: updateError } = await this.supabase.supabase
+          .from('employees')
+          .update({ avatar: googleUser.picture })
+          .eq('id', employeeData.id);
+
+        if (!updateError) {
+          employeeData.avatar = googleUser.picture;
+          console.log('[AuthService] ✓ Avatar actualizado');
+        } else {
+          console.warn('[AuthService] No se pudo actualizar el avatar:', updateError.message);
+        }
+      }
+
       await this.activateEmployee(employeeData);
     } catch (err) {
       console.error('[AuthService] Error cargando empleado:', err);
       this.employeeSignal.set(null);
     }
+  }
+
+  /**
+   * Comprueba si una URL de avatar es inválida o no carga.
+   * Solo funciona en navegador; en SSR devuelve false para no bloquear.
+   */
+  private async isAvatarBroken(url?: string): Promise<boolean> {
+    if (!this.isBrowser()) return false;
+    if (!url) return true;
+
+    return new Promise<boolean>((resolve) => {
+      try {
+        const img = new Image();
+        img.referrerPolicy = 'no-referrer';
+        const timeout = setTimeout(() => resolve(false), 2000);
+        img.onload = () => { clearTimeout(timeout); resolve(false); };
+        img.onerror = () => { clearTimeout(timeout); resolve(true); };
+        img.src = url;
+      } catch {
+        resolve(true);
+      }
+    });
   }
 
   private async activateEmployee(employeeData: any): Promise<void> {
@@ -296,7 +354,7 @@ export class AuthService {
             id: supabaseUser.id,
             email: supabaseUser.email || '',
             name: supabaseUser.user_metadata?.['full_name'] || supabaseUser.user_metadata?.['name'] || '',
-            picture: supabaseUser.user_metadata?.['avatar_url'] || supabaseUser.user_metadata?.['picture'],
+            picture: this.extractUserPicture(supabaseUser),
           };
 
           this.userSignal.set(user);
@@ -346,5 +404,21 @@ export class AuthService {
 
   private isBrowser(): boolean {
     return isPlatformBrowser(this.platformId);
+  }
+
+  /**
+   * Extrae la imagen de perfil del usuario de Supabase de forma robusta.
+   * Intenta en `user_metadata.avatar_url`, `user_metadata.picture`, y en identities Google.
+   */
+  private extractUserPicture(supabaseUser: any): string | undefined {
+    const metaPic = supabaseUser?.user_metadata?.['avatar_url'] || supabaseUser?.user_metadata?.['picture'];
+    if (metaPic) return metaPic;
+
+    const identities = supabaseUser?.identities as Array<any> | undefined;
+    const googleIdentity = identities?.find((i) => i?.provider === 'google');
+    const idPic = googleIdentity?.identity_data?.['avatar_url'] || googleIdentity?.identity_data?.['picture'];
+    if (idPic) return idPic;
+
+    return undefined;
   }
 }

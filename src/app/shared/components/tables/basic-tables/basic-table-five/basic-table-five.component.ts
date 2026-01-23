@@ -6,6 +6,7 @@ import { AuthService } from '../../../../services/auth.service';
 import { ModalService } from '../../../../services/modal.service';
 import { AlertComponent } from '../../../ui/alert/alert.component';
 import { EmployeeService, Employee, EmployeeInsert } from '../../../../services/employee.service';
+import { TaskService } from '../../../../services/task.service';
 
 type EmployeeForm = EmployeeInsert;
 
@@ -33,10 +34,16 @@ export class BasicTableFiveComponent implements OnInit {
   private alertId = 0;
 
   // Modal de confirmación de borrado
-  deleteConfirmation: { isOpen: boolean; employeeId: number | null; employeeName: string } = {
+  deleteConfirmation: {
+    isOpen: boolean;
+    employeeId: number | null;
+    employeeName: string;
+    taskCount: number;
+  } = {
     isOpen: false,
     employeeId: null,
-    employeeName: ''
+    employeeName: '',
+    taskCount: 0
   };
 
   readonly isModalOpen$;
@@ -44,7 +51,8 @@ export class BasicTableFiveComponent implements OnInit {
   constructor(
     private auth: AuthService,
     private modal: ModalService,
-    private employeeService: EmployeeService
+    private employeeService: EmployeeService,
+    private taskService: TaskService
   ) {
     this.isModalOpen$ = this.modal.isOpen$;
   }
@@ -150,7 +158,7 @@ export class BasicTableFiveComponent implements OnInit {
   /**
    * Abre el modal de confirmación para eliminar
    */
-  openDeleteConfirmation(id: number) {
+  async openDeleteConfirmation(id: number) {
     // No permitir eliminar el usuario actual
     if (!this.canDelete(id)) {
       this.showAlert('error', 'Error', 'No puedes eliminar tu propio usuario');
@@ -160,11 +168,27 @@ export class BasicTableFiveComponent implements OnInit {
     const employee = this.employees.find(emp => emp.id === id);
 
     if (employee) {
-      this.deleteConfirmation = {
-        isOpen: true,
-        employeeId: id,
-        employeeName: employee.name
-      };
+      // Verificar si tiene tareas asignadas
+      try {
+        const tasks = await this.taskService.getByEmployeeId(id);
+        const taskCount = tasks.length;
+
+        this.deleteConfirmation = {
+          isOpen: true,
+          employeeId: id,
+          employeeName: employee.name,
+          taskCount: taskCount
+        };
+      } catch (error) {
+        console.error('[BasicTableFive] Error verificando tareas:', error);
+        // Continuar con la eliminación sin contar tareas
+        this.deleteConfirmation = {
+          isOpen: true,
+          employeeId: id,
+          employeeName: employee.name,
+          taskCount: 0
+        };
+      }
     }
   }
 
@@ -175,7 +199,8 @@ export class BasicTableFiveComponent implements OnInit {
     this.deleteConfirmation = {
       isOpen: false,
       employeeId: null,
-      employeeName: ''
+      employeeName: '',
+      taskCount: 0
     };
   }
 
@@ -196,7 +221,7 @@ export class BasicTableFiveComponent implements OnInit {
         this.resetForm();
       }
 
-      this.showAlert('warning', 'Empleado eliminado', `${name} fue eliminado.`);
+      this.showAlert('warning', 'Empleado eliminado', `${name} fue eliminado junto con todas sus tareas y notificaciones.`);
     } catch (error) {
       console.error('Error deleting employee:', error);
       this.showAlert('error', 'Error', 'No se pudo eliminar el empleado');

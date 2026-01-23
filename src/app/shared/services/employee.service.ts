@@ -8,6 +8,7 @@ export interface Employee {
   color: string;
   role: string;
   is_active: boolean;
+  avatar?: string;
   created_at?: string;
 }
 
@@ -137,10 +138,11 @@ export class EmployeeService {
   }
 
   async delete(id: number): Promise<void> {
-    // Eliminar de verdad (hard delete), no soft delete
+    // Eliminar empleado con sus tareas y notificaciones asociadas
     console.log('[EmployeeService] Eliminando empleado ID:', id);
+    console.log('[EmployeeService] Las tareas y notificaciones asociadas se eliminarán automáticamente (CASCADE)');
 
-    const { error, data } = await this.supabase.supabase
+    const { error } = await this.supabase.supabase
       .from('employees')
       .delete()
       .eq('id', id);
@@ -151,6 +153,7 @@ export class EmployeeService {
     }
 
     console.log('[EmployeeService] ✓ Empleado eliminado correctamente');
+    console.log('[EmployeeService] ✓ Tareas y notificaciones asociadas eliminadas automáticamente');
   }
 
   async updateIsActive(id: number, isActive: boolean): Promise<void> {

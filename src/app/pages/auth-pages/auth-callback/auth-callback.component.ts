@@ -28,7 +28,20 @@ export class AuthCallbackComponent implements OnInit {
 
       if (user) {
         console.log('[AuthCallback] Usuario autenticado correctamente');
-        this.router.navigate(['/']);
+
+        // Esperar un momento para que se cargue el empleado
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        // Verificar si el usuario está registrado como empleado
+        const isEmployee = this.authService.isEmployee();
+
+        if (isEmployee) {
+          console.log('[AuthCallback] Usuario registrado como empleado, redirigiendo a dashboard');
+          this.router.navigate(['/']);
+        } else {
+          console.warn('[AuthCallback] Usuario no registrado como empleado, redirigiendo a unauthorized');
+          this.router.navigate(['/unauthorized']);
+        }
       } else {
         console.error('[AuthCallback] No se pudo autenticar el usuario');
         this.router.navigate(['/signin'], {

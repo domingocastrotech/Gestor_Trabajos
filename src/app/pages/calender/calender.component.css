@@ -1,0 +1,103 @@
+/* Animación de entrada suave para el tooltip */
+@keyframes fadeInTooltip {
+	from {
+		opacity: 0;
+		transform: translateY(-8px) scale(0.95);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0) scale(1);
+	}
+}
+
+/* Indicador de localizaciones faltantes - Badge rojo */
+.missing-location-badge {
+	position: absolute;
+	top: 4px;
+	right: 4px;
+	width: 16px;
+	height: 16px;
+	background-color: #ef4444 !important;
+	border-radius: 50%;
+	color: white;
+	font-size: 10px;
+	font-weight: bold;
+	display: flex !important;
+	align-items: center;
+	justify-content: center;
+	z-index: 20;
+	cursor: help;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+	transition: transform 0.2s ease, box-shadow 0.2s ease;
+	border: 2px solid white;
+}
+.missing-location-badge:hover {
+	transform: scale(1.25);
+	box-shadow: 0 4px 8px rgba(239, 68, 68, 0.4);
+}
+.missing-locations-tooltip {
+	position: fixed !important;
+	background-color: #fee2e2 !important;
+	color: #991b1b !important;
+	padding: 12px 16px !important;
+	border-radius: 8px !important;
+	border: 1px solid #fecaca !important;
+	font-size: 13px !important;
+	white-space: normal !important;
+	z-index: 999999 !important;
+	box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3) !important;
+	min-width: 180px !important;
+	max-width: 300px !important;
+	text-align: left !important;
+	line-height: 1.6 !important;
+	pointer-events: auto !important;
+	display: block !important;
+	opacity: 1 !important;
+	visibility: visible !important;
+	animation: fadeInTooltip 0.2s ease !important;
+}
+.missing-locations-tooltip::after {
+	content: '' !important;
+	position: absolute !important;
+	bottom: -8px !important;
+	left: 50% !important;
+	transform: translateX(-50%) !important;
+	width: 0 !important;
+	height: 0 !important;
+	border-left: 8px solid transparent !important;
+	border-right: 8px solid transparent !important;
+	border-top: 8px solid #fee2e2 !important;
+}
+
+.dark .missing-locations-tooltip,
+:host-context(.dark) .missing-locations-tooltip {
+	background-color: #fee2e2 !important;
+	color: #991b1b !important;
+	border-color: #fecaca !important;
+}
+
+.dark .missing-locations-tooltip::after,
+:host-context(.dark) .missing-locations-tooltip::after {
+	border-top-color: #fee2e2 !important;
+}
+
+.missing-locations-tooltip strong {
+	color: #991b1b !important;
+	font-weight: 600 !important;
+	display: block !important;
+	margin-bottom: 6px !important;
+}
+
+.missing-locations-tooltip > div {
+	margin: 4px 0;
+	padding-left: 4px;
+}
+
+.fc .fc-daygrid-day-top {
+	position: relative;
+}
+
+/* Forzar el tooltip por encima de todo en el calendario */
+.stop-tooltip-custom {
+	z-index: 999999 !important;
+}

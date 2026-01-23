@@ -42,6 +42,7 @@
           <th scope="col" class="px-4 py-3 font-medium text-gray-500 sm:px-6 text-start text-theme-xs dark:text-gray-400">Administración</th>
           <th scope="col" class="px-4 py-3 font-medium text-gray-500 sm:px-6 text-start text-theme-xs dark:text-gray-400">Dirección</th>
           <th scope="col" class="px-4 py-3 font-medium text-gray-500 sm:px-6 text-start text-theme-xs dark:text-gray-400">Ciudad</th>
+          <th scope="col" class="px-4 py-3 font-medium text-gray-500 sm:px-6 text-start text-theme-xs dark:text-gray-400">Días Obligatorios</th>
           <th scope="col" class="px-4 py-3 font-medium text-gray-500 sm:px-6 text-end text-theme-xs dark:text-gray-400">Acciones</th>
         </tr>
       </thead>
@@ -51,6 +52,9 @@
             <td class="px-4 py-3 font-medium text-gray-800 sm:px-6 text-start text-theme-sm dark:text-white/90">{{ location.name }}</td>
             <td class="px-4 py-3 text-gray-500 sm:px-6 text-start text-theme-sm dark:text-gray-400">{{ location.address }}</td>
             <td class="px-4 py-3 text-gray-500 sm:px-6 text-start text-theme-sm dark:text-gray-400">{{ location.city }}</td>
+            <td class="px-4 py-3 text-gray-500 sm:px-6 text-start text-theme-sm dark:text-gray-400">
+              <span class="text-xs">{{ getLocationDaysText(location.id) }}</span>
+            </td>
             <td class="px-4 py-3 text-end text-theme-sm sm:px-6">
               <div class="flex items-center justify-end gap-2">
                 <button
@@ -91,7 +95,23 @@
         <div>
           <h4 class="font-semibold text-gray-900 dark:text-white">¿Eliminar localización?</h4>
           <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            ¿Estás seguro de que quieres eliminar "<span class="font-medium">{{ deleteConfirmation.locationName }}</span>"? Esta acción no se puede deshacer.
+            ¿Estás seguro de que quieres eliminar "<span class="font-medium">{{ deleteConfirmation.locationName }}</span>"?
+          </p>
+          @if (deleteConfirmation.taskCount > 0) {
+            <div class="mt-3 rounded-lg bg-orange-50 border border-orange-200 p-3 dark:bg-orange-900/20 dark:border-orange-800/50 text-left">
+              <p class="text-sm text-orange-800 dark:text-orange-300 font-medium flex items-center gap-2">
+                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                </svg>
+                <span>Esta localización tiene {{ deleteConfirmation.taskCount }} {{ deleteConfirmation.taskCount === 1 ? 'tarea asignada' : 'tareas asignadas' }}</span>
+              </p>
+              <p class="mt-2 text-xs text-orange-700 dark:text-orange-400">
+                Al eliminar esta localización, todas las tareas asociadas perderán su referencia de ubicación.
+              </p>
+            </div>
+          }
+          <p class="mt-3 text-xs text-red-600 dark:text-red-400">
+            Esta acción no se puede deshacer.
           </p>
         </div>
       </div>
@@ -175,6 +195,21 @@
           />
         </div>
 
+        <div class="sm:col-span-2">
+          <label class="text-theme-xs font-medium text-gray-600 dark:text-gray-300">Días para mostrar en tooltip</label>
+          <div class="flex flex-wrap gap-2 mt-1">
+              @for (day of daysOfWeek; track day.num) {
+                <label class="flex items-center gap-1 text-sm text-gray-700 dark:text-gray-300">
+                  <input type="checkbox"
+                    [checked]="form.days?.includes(day.num)"
+                    (change)="onDayCheckboxChange(day.num, $event.target.checked)"
+                    name="day-{{day.num}}"
+                  />
+                  {{ day.name }}
+                </label>
+              }
+          </div>
+        </div>
         <div class="sm:col-span-2 flex items-center justify-end gap-3 pt-2">
           <button
             type="button"
@@ -185,8 +220,10 @@
           </button>
           <button
             type="submit"
-            class="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white shadow-theme-sm transition hover:bg-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-200"
+            [disabled]="isLoading"
+            class="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white shadow-theme-sm transition hover:bg-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
+            <span *ngIf="isLoading" class="animate-spin mr-2">⏳</span>
             {{ editingId ? 'Guardar cambios' : 'Añadir localización' }}
           </button>
         </div>

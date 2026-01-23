@@ -1,19 +1,27 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { PageBreadcrumbComponent } from '../../shared/components/common/page-breadcrumb/page-breadcrumb.component';
 import { AuthService } from '../../shared/services/auth.service';
+import { TaskService } from '../../shared/services/task.service';
+import { EmployeeService } from '../../shared/services/employee.service';
+import { VacationService } from '../../shared/services/vacation.service';
+import { LocationService } from '../../shared/services/location.service';
 import { Utf8FixPipe } from '../../shared/pipes/utf8-fix.pipe';
 import { Router } from '@angular/router';
 
 interface Task {
-  id: string;
+  id: number;
   title: string;
-  location: string;
-  dueDate: string;
-  employeeName: string;
-  employeeColor: string;
-  startTime: string;
-  endTime: string;
+  location_id: number;
+  location_name?: string;
+  assigned_to: string;
+  employee_name?: string;
+  start_date: string;
+  end_date: string;
+  start_time: string;
+  end_time: string;
+  status: string;
+  employee_color?: string;
 }
 
 interface Activity {
@@ -28,8 +36,6 @@ interface Employee {
   id: number;
   name: string;
   email: string;
-  avatar: string;
-  rol: string;
 }
 
 interface Location {
@@ -40,11 +46,14 @@ interface Location {
 
 @Component({
   selector: 'app-blank',
+  standalone: true,
   imports: [PageBreadcrumbComponent, CommonModule, Utf8FixPipe],
   templateUrl: './blank.component.html',
   styles: ``
 })
-export class BlankComponent implements OnInit {
+export class BlankComponent implements OnInit, OnDestroy {
+    todayLabel: string = '';
+    weekLabel: string = '';
   currentEmployee: any;
 
   taskStats = {
@@ -54,39 +63,9 @@ export class BlankComponent implements OnInit {
     pendingVacations: 0
   };
 
-  employees: Employee[] = [
-    {
-      id: 1,
-      name: 'Ana García',
-      email: 'ana.garcia@empresa.com',
-      avatar: '/images/user/user-01.png',
-      rol: 'Administrador'
-    },
-    {
-      id: 2,
-      name: 'Luis Pérez',
-      email: 'luis.perez@empresa.com',
-      avatar: '/images/user/user-02.png',
-      rol: 'Usuario'
-    },
-    {
-      id: 3,
-      name: 'María López',
-      email: 'maria.lopez@empresa.com',
-      avatar: '/images/user/user-03.png',
-      rol: 'Usuario'
-    }
-  ];
-
-  locations: Location[] = [
-    { id: 1, name: 'Sede Central', city: 'Madrid' },
-    { id: 2, name: 'Oficina Norte', city: 'Bilbao' },
-    { id: 3, name: 'Centro Operativo', city: 'Barcelona' }
-  ];
-
+  employees: Employee[] = [];
+  locations: Location[] = [];
   upcomingTasks: Task[] = [];
-
-  recentActivities: Activity[] = [];
 
   weeklyStats = [
     { day: 'Lun', tasks: 0 },
@@ -100,6 +79,10 @@ export class BlankComponent implements OnInit {
 
   constructor(
     private authService: AuthService,
+    private taskService: TaskService,
+    private employeeService: EmployeeService,
+    private vacationService: VacationService,
+    private locationService: LocationService,
     private router: Router
   ) {
     this.currentEmployee = null;
@@ -108,167 +91,138 @@ export class BlankComponent implements OnInit {
   ngOnInit() {
     // Obtener datos del usuario autenticado
     const user = this.authService.user;
+    const employee = this.authService.employee;
     if (user) {
-      // Buscar el empleado en la lista
-      const employee = this.employees.find(e => e.email === user.email);
       this.currentEmployee = {
-        id: employee?.id || 1,
         name: user.name,
         email: user.email,
-        role: employee?.rol || 'Administrador',
-        avatar: user.picture || employee?.avatar || '/images/user/user-01.png'
-      };
-    } else {
-      // Fallback - Usar Ana García como usuario por defecto
-      this.currentEmployee = {
-        id: 1,
-        name: 'Ana García',
-        email: 'ana.garcia@empresa.com',
-        role: 'Administrador',
-        avatar: '/images/user/user-01.png'
+        role: employee?.role || 'Usuario',
+        avatar: user.picture || '/images/user/user-01.png'
       };
     }
 
+    // Etiquetas de fecha
+    const today = new Date();
+    const options: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'long' };
+    this.todayLabel = today.toLocaleDateString('es-ES', options);
+
+    // Calcular rango de semana (lunes a domingo)
+    const dayOfWeek = today.getDay() === 0 ? 7 : today.getDay(); // 1 (lunes) - 7 (domingo)
+    const monday = new Date(today);
+    monday.setDate(today.getDate() - (dayOfWeek - 1));
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    const monthShort = (date: Date) => date.toLocaleDateString('es-ES', { month: 'short' });
+    this.weekLabel = `${monday.getDate()}-${sunday.getDate()} ${monthShort(today)}`;
+
     // Cargar datos del sistema
-    this.loadTaskData();
-    this.loadRecentActivities();
+    this.loadData();
+  }
+
+  ngOnDestroy() {
   }
 
   get isAdmin(): boolean {
-    return this.currentEmployee?.role === 'Administrador';
+    return this.currentEmployee?.role === 'admin';
   }
 
-  loadTaskData() {
-    // Datos reales del sistema que coinciden con el calendario
-    const targetDate = '2026-01-15';
+  async loadData() {
+    try {
+      // Cargar empleados
+      const employees = await this.employeeService.getAllEmployees();
+      this.employees = employees.map(e => ({
+        id: e.id,
+        name: e.name,
+        email: e.email
+      }));
 
-    // Tareas del calendario
-    const allTasks: Task[] = [
-      {
-        id: 't1',
-        title: 'Ana García - Sede Central',
-        location: 'Sede Central',
-        dueDate: targetDate,
-        employeeName: 'Ana García',
-        employeeColor: '#10b981',
-        startTime: '09:00',
-        endTime: '10:00'
-      },
-      {
-        id: 't2',
-        title: 'Luis Pérez - Oficina Norte',
-        location: 'Oficina Norte',
-        dueDate: targetDate,
-        employeeName: 'Luis Pérez',
-        employeeColor: '#6366f1',
-        startTime: '10:00',
-        endTime: '11:00'
-      },
-      {
-        id: 't3',
-        title: 'María López - Centro Operativo',
-        location: 'Centro Operativo',
-        dueDate: targetDate,
-        employeeName: 'María López',
-        employeeColor: '#f97316',
-        startTime: '11:00',
-        endTime: '12:00'
-      },
-      {
-        id: 't4',
-        title: 'Ana García - Oficina Norte',
-        location: 'Oficina Norte',
-        dueDate: targetDate,
-        employeeName: 'Ana García',
-        employeeColor: '#10b981',
-        startTime: '12:00',
-        endTime: '13:00'
-      },
-      {
-        id: 't5',
-        title: 'Luis Pérez - Sede Central',
-        location: 'Sede Central',
-        dueDate: targetDate,
-        employeeName: 'Luis Pérez',
-        employeeColor: '#6366f1',
-        startTime: '14:00',
-        endTime: '15:00'
-      },
-      {
-        id: 't6',
-        title: 'María López - Sede Central',
-        location: 'Sede Central',
-        dueDate: '2026-01-16',
-        employeeName: 'María López',
-        employeeColor: '#f97316',
-        startTime: '09:00',
-        endTime: '11:00'
-      },
-      {
-        id: 't7',
-        title: 'Ana García - Centro Operativo',
-        location: 'Centro Operativo',
-        dueDate: '2026-01-17',
-        employeeName: 'Ana García',
-        employeeColor: '#10b981',
-        startTime: '10:00',
-        endTime: '12:00'
-      }
-    ];
+      // Cargar ubicaciones
+      const locations = await this.locationService.getAll();
+      this.locations = locations.map((l: any) => ({
+        id: l.id,
+        name: l.name,
+        city: l.city || ''
+      }));
 
-    // Si es usuario normal, filtrar solo sus tareas
-    const filteredTasks = this.isAdmin 
-      ? allTasks 
-      : allTasks.filter(t => t.employeeName === this.currentEmployee?.name);
+      // Cargar tareas
+      await this.loadTaskData();
 
-    // Estadísticas
-    if (this.isAdmin) {
-      // Vista de administrador: todas las tareas
-      this.taskStats.total = allTasks.length;
-      this.taskStats.todayTasks = allTasks.filter(t => t.dueDate === targetDate).length;
-      
-      const weekStart = new Date('2026-01-15');
-      const weekEnd = new Date('2026-01-19');
-      this.taskStats.thisWeekTasks = allTasks.filter(t => {
-        const taskDate = new Date(t.dueDate);
-        return taskDate >= weekStart && taskDate <= weekEnd;
-      }).length;
+      // Cargar actividades recientes
+    } catch (error) {
+      console.error('Error cargando datos del dashboard:', error);
+    }
+  }
 
-      this.taskStats.pendingVacations = 1; // Luis Pérez tiene una pendiente
+  async loadTaskData() {
+    try {
+      let allTasks: any[] = [];
 
-      // Estadísticas semanales con todas las tareas
-      this.weeklyStats = [
-        { day: 'Lun', tasks: 5 },
-        { day: 'Mar', tasks: 1 },
-        { day: 'Mié', tasks: 1 },
-        { day: 'Jue', tasks: 0 },
-        { day: 'Vie', tasks: 0 },
-        { day: 'Sáb', tasks: 0 },
-        { day: 'Dom', tasks: 0 }
-      ];
-    } else {
-      // Vista de usuario: solo sus tareas
-      this.taskStats.total = filteredTasks.length;
-      this.taskStats.todayTasks = filteredTasks.filter(t => t.dueDate === targetDate).length;
-      
-      const weekStart = new Date('2026-01-15');
-      const weekEnd = new Date('2026-01-19');
-      this.taskStats.thisWeekTasks = filteredTasks.filter(t => {
-        const taskDate = new Date(t.dueDate);
-        return taskDate >= weekStart && taskDate <= weekEnd;
-      }).length;
-
-      // Para usuarios: mostrar si tiene vacaciones aprobadas
-      this.taskStats.pendingVacations = 0; // Los usuarios ven sus vacaciones de otra forma
-
-      // Contar tareas por día (solo del usuario)
-      const tasksByDay: Record<string, number> = {};
-      filteredTasks.forEach(t => {
-        const date = new Date(t.dueDate);
-        const dayOfWeek = date.getDay();
-        if (dayOfWeek >= 1 && dayOfWeek <= 5) {
-          tasksByDay[dayOfWeek] = (tasksByDay[dayOfWeek] || 0) + 1;
+      if (this.isAdmin) {
+        // Para administradores: cargar todas las tareas
+        allTasks = await this.taskService.getAll();
+      } else {
+        // Para usuarios: cargar solo sus tareas
+        const employee = this.authService.employee;
+        if (employee?.id) {
+          const tasks = await this.taskService.getByEmployeeId(employee.id);
+          allTasks = tasks;
         }
+      }
+
+      // Enriquecer tareas con información de empleado y ubicación
+      const enrichedTasks = allTasks.map(task => {
+        const employee = this.employees.find(e => e.id === task.assigned_to);
+        const location = this.locations.find(l => l.id === task.location_id);
+
+        const colors = ['#10b981', '#6366f1', '#f97316', '#ec4899', '#14b8a6', '#8b5cf6'];
+        const colorIndex = task.assigned_to % colors.length;
+
+        return {
+          ...task,
+          employee_name: employee?.name || 'Sin asignar',
+          location_name: location?.name || 'Sin ubicación',
+          employee_color: colors[colorIndex]
+        };
+      });
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const weekStart = new Date(today);
+      const weekEnd = new Date(today);
+      weekEnd.setDate(weekEnd.getDate() + 7);
+
+      // Estadísticas
+      this.taskStats.total = enrichedTasks.length;
+      this.taskStats.todayTasks = enrichedTasks.filter(t => {
+        const taskDate = new Date(t.start_date);
+        taskDate.setHours(0, 0, 0, 0);
+        return taskDate.getTime() === today.getTime();
+      }).length;
+
+      this.taskStats.thisWeekTasks = enrichedTasks.filter(t => {
+        const taskDate = new Date(t.start_date);
+        return taskDate >= weekStart && taskDate <= weekEnd;
+      }).length;
+
+      // Próximas tareas: solo desde hoy en adelante
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+      this.upcomingTasks = enrichedTasks
+        .filter(t => {
+          const taskDate = new Date(t.start_date);
+          taskDate.setHours(0, 0, 0, 0);
+          return taskDate >= now;
+        })
+        .sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())
+        .slice(0, 5);
+
+      // Estadísticas semanales por día
+      const tasksByDay: Record<number, number> = {};
+      enrichedTasks.forEach(t => {
+        const taskDate = new Date(t.start_date);
+        const dayOfWeek = taskDate.getDay();
+        tasksByDay[dayOfWeek] = (tasksByDay[dayOfWeek] || 0) + 1;
       });
 
       this.weeklyStats = [
@@ -277,102 +231,33 @@ export class BlankComponent implements OnInit {
         { day: 'Mié', tasks: tasksByDay[3] || 0 },
         { day: 'Jue', tasks: tasksByDay[4] || 0 },
         { day: 'Vie', tasks: tasksByDay[5] || 0 },
-        { day: 'Sáb', tasks: 0 },
-        { day: 'Dom', tasks: 0 }
+        { day: 'Sáb', tasks: tasksByDay[6] || 0 },
+        { day: 'Dom', tasks: tasksByDay[0] || 0 }
       ];
-    }
 
-    // Próximas tareas (filtradas según el rol)
-    this.upcomingTasks = filteredTasks
-      .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
-      .slice(0, 5);
-  }
-
-  loadRecentActivities() {
-    if (this.isAdmin) {
-      // Actividades del sistema completo para administradores
-      this.recentActivities = [
-        {
-          id: 1,
-          action: 'Tareas programadas para hoy',
-          description: '5 tareas asignadas a diferentes empleados',
-          date: 'Hoy',
-          icon: '📋'
-        },
-        {
-          id: 2,
-          action: 'Solicitud de vacaciones',
-          description: 'Luis Pérez: del 20 al 24 de enero',
-          date: 'Hace 5 días',
-          icon: '🏖️'
-        },
-        {
-          id: 3,
-          action: 'Vacaciones aprobadas',
-          description: 'María López: día libre el 18 de enero',
-          date: 'Hace 3 días',
-          icon: '✅'
-        },
-        {
-          id: 4,
-          action: 'Sistema de empleados',
-          description: '3 empleados activos en el sistema',
-          date: 'Hace 1 semana',
-          icon: '👥'
+      // Vacaciones pendientes (solo para admin)
+      if (this.isAdmin) {
+        try {
+          const vacations = await this.vacationService.getAll();
+          this.taskStats.pendingVacations = vacations.filter((v: any) => v.status === 'pending').length;
+        } catch (error) {
+          console.log('No se pudieron cargar las vacaciones');
+          this.taskStats.pendingVacations = 0;
         }
-      ];
-    } else {
-      // Actividades personales para usuarios normales
-      const userName = this.currentEmployee?.name || 'Usuario';
-      const userTasks = this.taskStats.todayTasks;
-      
-      this.recentActivities = [
-        {
-          id: 1,
-          action: 'Tus tareas de hoy',
-          description: `Tienes ${userTasks} ${userTasks === 1 ? 'tarea asignada' : 'tareas asignadas'} para hoy`,
-          date: 'Hoy',
-          icon: '📋'
-        },
-        {
-          id: 2,
-          action: 'Tareas de esta semana',
-          description: `${this.taskStats.thisWeekTasks} ${this.taskStats.thisWeekTasks === 1 ? 'tarea programada' : 'tareas programadas'}`,
-          date: 'Esta semana',
-          icon: '📅'
-        },
-        {
-          id: 3,
-          action: 'Tu perfil',
-          description: `Asignado a ${this.locations.length} ubicaciones diferentes`,
-          date: 'Información',
-          icon: '👤'
-        }
-      ];
-
-      // Agregar actividad de vacaciones si aplica
-      if (userName === 'María López') {
-        this.recentActivities.splice(1, 0, {
-          id: 4,
-          action: 'Vacaciones aprobadas',
-          description: 'Tu día libre del 18 de enero fue aprobado',
-          date: 'Hace 3 días',
-          icon: '✅'
-        });
-      } else if (userName === 'Luis Pérez') {
-        this.recentActivities.splice(1, 0, {
-          id: 4,
-          action: 'Solicitud pendiente',
-          description: 'Vacaciones del 20-24 enero pendiente de aprobación',
-          date: 'Hace 5 días',
-          icon: '⏳'
-        });
       }
+    } catch (error) {
+      console.error('Error cargando datos de tareas:', error);
     }
   }
+
 
   navigateToCalendar() {
-    this.router.navigate(['/calendar']);
+    const employee = this.authService.employee;
+    if (employee && employee.id) {
+      this.router.navigate(['/calendar'], { queryParams: { employee: employee.id } });
+    } else {
+      this.router.navigate(['/calendar']);
+    }
   }
 
   navigateToEmployees() {
@@ -381,5 +266,14 @@ export class BlankComponent implements OnInit {
 
   navigateToLocations() {
     this.router.navigate(['/localizacion']);
+  }
+
+  /**
+   * Formatea una hora quitando los segundos (HH:MM:SS -> HH:MM)
+   */
+  formatTimeWithoutSeconds(time: string | undefined | null): string {
+    if (!time) return '';
+    const parts = time.split(':');
+    return parts.length >= 2 ? `${parts[0]}:${parts[1]}` : time;
   }
 }

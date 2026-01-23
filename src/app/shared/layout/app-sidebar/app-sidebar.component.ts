@@ -2,8 +2,9 @@ import { CommonModule } from '@angular/common';
 import { Component, ElementRef, QueryList, ViewChildren, ChangeDetectorRef } from '@angular/core';
 import { SidebarService } from '../../services/sidebar.service';
 import { NavigationEnd, Router, RouterModule } from '@angular/router';
-import { SafeHtmlPipe } from '../../pipe/safe-html.pipe';
+import { SafeHtmlPipe } from '../../pipes/safe-html.pipe';
 import { combineLatest, Subscription } from 'rxjs';
+import { AuthService } from '../../services/auth.service';
 
 type NavItem = {
   name: string;
@@ -59,7 +60,8 @@ export class AppSidebarComponent {
   constructor(
     public sidebarService: SidebarService,
     private router: Router,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private authService: AuthService
   ) {
     this.isExpanded$ = this.sidebarService.isExpanded$;
     this.isMobileOpen$ = this.sidebarService.isMobileOpen$;
@@ -136,7 +138,7 @@ export class AppSidebarComponent {
 
   private setActiveMenuFromRoute(currentUrl: string) {
     let foundActiveSubmenu = false;
-    
+
     const menuGroups = [
       { items: this.navItems, prefix: 'main' },
     ];
@@ -177,7 +179,11 @@ export class AppSidebarComponent {
         this.sidebarService.setMobileOpen(false);
       }
     }).unsubscribe();
-  }  
+  }
 
-  
+  isAdmin(): boolean {
+    const employee = this.authService.employee;
+    return employee?.role === 'Administrador';
+  }
+
 }

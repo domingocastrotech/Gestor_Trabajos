@@ -2,7 +2,8 @@ import { KeyValuePipe, CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FullCalendarComponent, FullCalendarModule } from '@fullcalendar/angular';
 
-import { Component, ViewChild } from '@angular/core';
+import { Component, ViewChild, ChangeDetectorRef } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
 import { EventInput, CalendarOptions, DateSelectArg, EventClickArg } from '@fullcalendar/core';
 import esLocale from '@fullcalendar/core/locales/es';
 import dayGridPlugin from '@fullcalendar/daygrid';
@@ -11,29 +12,21 @@ import interactionPlugin from '@fullcalendar/interaction';
 import { ModalComponent } from '../../shared/components/ui/modal/modal.component';
 import { AlertComponent } from '../../shared/components/ui/alert/alert.component';
 import { NotificationService } from '../../shared/services/notification.service';
+import { TaskService, Task } from '../../shared/services/task.service';
+import { VacationService, VacationRequest as VacationRequestDB } from '../../shared/services/vacation.service';
+import { EmployeeService, Employee } from '../../shared/services/employee.service';
+import { LocationService, Location } from '../../shared/services/location.service';
+import { AuthService } from '../../shared/services/auth.service';
+import { SupabaseService } from '../../shared/services/supabase.service';
 
-interface Employee {
+// Interfaz para los días configurados por localización
+interface TooltipLocDay {
   id: number;
-  name: string;
-  email: string;
-  color: string;
-  rol: 'Administrador' | 'Usuario';
+  locations_id: number;
+  day: number; // 1=Lunes, 2=Martes, ..., 7=Domingo
 }
 
-interface Location {
-  id: number;
-  name: string;
-  address: string;
-  city: string;
-}
-
-interface AlertItem {
-  id: number;
-  variant: 'success' | 'error' | 'warning' | 'info';
-  title: string;
-  message: string;
-}
-
+// Interfaz local para manejar vacaciones en el componente
 interface VacationRequest {
   id: number;
   employeeId: number;
@@ -46,6 +39,13 @@ interface VacationRequest {
   requestDate: string;
 }
 
+interface AlertItem {
+  id: number;
+  variant: 'success' | 'error' | 'warning' | 'info';
+  title: string;
+  message: string;
+}
+
 interface CalendarEvent extends EventInput {
   extendedProps: {
     calendar: string;
@@ -53,6 +53,7 @@ interface CalendarEvent extends EventInput {
     employeeId?: number;
     employeeName?: string;
     employeeColor?: string;
+    employeeAvatar?: string;
     startTime?: string;
     endTime?: string;
     isVacation?: boolean;
@@ -71,6 +72,17 @@ interface CalendarEvent extends EventInput {
   ],
   templateUrl: './calender.component.html',
   styles: `
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(-8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
     :host ::ng-deep {
       .fc .fc-daygrid-day-frame {
         min-height: 100px;
@@ -262,6 +274,8 @@ interface CalendarEvent extends EventInput {
   `
 })
 export class CalenderComponent {
+    isVacationSubmitting = false;
+  isAddEventLoading = false;
 
   @ViewChild('calendar') calendarComponent!: FullCalendarComponent;
 
@@ -273,6 +287,16 @@ export class CalenderComponent {
   eventEndDate = '';
   eventLevel = '';
   eventLocation = '';
+  eventLocationDays: number[] = [];
+  daysOfWeek = [
+    { num: 1, name: 'Lunes' },
+    { num: 2, name: 'Martes' },
+    { num: 3, name: 'Miércoles' },
+    { num: 4, name: 'Jueves' },
+    { num: 5, name: 'Viernes' },
+    { num: 6, name: 'Sábado' },
+    { num: 0, name: 'Domingo' }
+  ];
   eventEmployeeId: number | undefined = undefined;
   eventStartTime = '09:00';
   eventEndTime = '17:00';
@@ -294,8 +318,8 @@ export class CalenderComponent {
     title: string;
     location?: string;
     employeeName?: string;
-
     employeeColor?: string;
+    employeeAvatar?: string;
     startTime?: string;
     endTime?: string;
     isVacation?: boolean;
@@ -305,6 +329,34 @@ export class CalenderComponent {
   alerts: AlertItem[] = [];
   private alertId = 0;
 
+  // Modal de decisión de vacaciones (aprobar/rechazar con comentario)
+  vacationDecisionModal: {
+    isOpen: boolean;
+    requestId: number | null;
+    action: 'approve' | 'reject' | null;
+    sendEmail: boolean;
+    emailComment: string;
+    isLoading: boolean;
+  } = {
+    isOpen: false,
+    requestId: null,
+    action: null,
+    sendEmail: false,
+    emailComment: '',
+    isLoading: false
+  };
+
+  // Modal de confirmación de borrado de tarea
+  deleteConfirmation: {
+    isOpen: boolean;
+    taskId: string | null;
+    taskTitle: string;
+  } = {
+    isOpen: false,
+    taskId: null,
+    taskTitle: ''
+  };
+
   // Sistema de vacaciones
   vacationRequests: VacationRequest[] = [];
   isVacationModalOpen = false;
@@ -313,7 +365,7 @@ export class CalenderComponent {
   vacationEndDate = '';
   vacationType: 'vacation' | 'day-off' = 'vacation';
   vacationReason = '';
-  currentUser: Employee | null = null; // Simular usuario actual
+  currentUser: Employee | null = null;
 
   // Calendario personalizado
   showStartDatePicker = false;
@@ -324,35 +376,9 @@ export class CalenderComponent {
   monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
                 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
-  locations: Location[] = [
-    { id: 1, name: 'Sede Central', address: 'Av. Principal 123', city: 'Madrid' },
-    { id: 2, name: 'Oficina Norte', address: 'Calle Norte 45', city: 'Bilbao' },
-    { id: 3, name: 'Centro Operativo', address: 'Gran Vía 210', city: 'Barcelona' },
-  ];
-
-  employees: Employee[] = [
-    {
-      id: 1,
-      name: 'Ana García',
-      email: 'ana.garcia@empresa.com',
-      color: '#10b981',
-      rol: 'Administrador',
-    },
-    {
-      id: 2,
-      name: 'Luis Pérez',
-      email: 'luis.perez@empresa.com',
-      color: '#6366f1',
-      rol: 'Usuario',
-    },
-    {
-      id: 3,
-      name: 'María López',
-      email: 'maria.lopez@empresa.com',
-      color: '#f97316',
-      rol: 'Usuario',
-    },
-  ];
+  locations: Location[] = [];
+  employees: Employee[] = [];
+  tooltipLocDays: TooltipLocDay[] = []; // Días configurados para cada localización
 
   calendarsEvents: Record<string, string> = {
     Danger: 'danger',
@@ -362,310 +388,34 @@ export class CalenderComponent {
   };
 
   calendarOptions!: CalendarOptions;
+  isCalendarLoading = true;
+  loadingMessage = 'Cargando calendario...';
 
-  constructor(private notificationService: NotificationService) {}
-
-  ngOnInit() {
-    // Simular usuario actual (Ana García como administradora)
-    this.currentUser = this.employees[0];
-
-    // Inicializar solicitudes de vacaciones de ejemplo
-    this.vacationRequests = [
-      {
-        id: 1,
-        employeeId: 2,
-        employeeName: 'Luis Pérez',
-
-        startDate: '2026-01-20',
-        endDate: '2026-01-24',
-        type: 'vacation',
-        reason: 'Vacaciones de invierno',
-        status: 'pending',
-        requestDate: '2026-01-10'
-      },
-      {
-        id: 2,
-        employeeId: 3,
-        employeeName: 'María López',
-
-        startDate: '2026-01-18',
-        endDate: '2026-01-18',
-        type: 'day-off',
-        reason: 'Asuntos personales',
-        status: 'approved',
-        requestDate: '2026-01-12'
-      }
-    ];
-
-    // Agregar notificaciones de ejemplo para demostrar el sistema
-    // Si hay solicitudes pendientes, notificar al admin
-    const pendingRequests = this.vacationRequests.filter(r => r.status === 'pending');
-    if (this.isAdmin && pendingRequests.length > 0) {
-      pendingRequests.forEach(request => {
-        this.notificationService.addNotification({
-          type: 'vacation-request',
-          title: 'Nueva solicitud de vacaciones',
-          message: `${request.employeeName} ha solicitado ${request.type === 'vacation' ? 'vacaciones' : 'un día libre'} del ${this.formatDate(request.startDate)} al ${this.formatDate(request.endDate)}`,
-          recipient_email: this.currentUser?.email || '',
-          data: { requestId: request.id }
-        });
-      });
-    }
-
-    const today = new Date().toISOString().split('T')[0];
-    const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
-    const twoDays = new Date(Date.now() + 172800000).toISOString().split('T')[0];
-    const targetDate = '2026-01-15';
-
-    this.events = [
-      {
-        id: '1',
-        title: 'Event Conf.',
-        start: today,
-        backgroundColor: '#10b981',
-        borderColor: '#10b981',
-        extendedProps: {
-          calendar: 'Danger',
-          location: 'Sede Central',
-          employeeId: 1,
-          employeeName: 'Ana García',
-
-          employeeColor: '#10b981',
-          startTime: '09:00',
-          endTime: '11:00'
-        }
-      },
-      // Lote de tareas para el 15
-      {
-        id: 't1',
-        title: 'Tarea 1 - Ana García',
-        start: targetDate,
-        backgroundColor: '#10b981',
-        borderColor: '#10b981',
-        extendedProps: {
-          calendar: 'Primary',
-          location: 'Sede Central',
-          employeeId: 1,
-          employeeName: 'Ana García',
-
-          employeeColor: '#10b981',
-          startTime: '09:00',
-          endTime: '10:00'
-        }
-      },
-      {
-        id: 't2',
-        title: 'Tarea 2 - Luis Pérez',
-        start: targetDate,
-        backgroundColor: '#6366f1',
-        borderColor: '#6366f1',
-        extendedProps: {
-          calendar: 'Primary',
-          location: 'Oficina Norte',
-          employeeId: 2,
-          employeeName: 'Luis Pérez',
-
-          employeeColor: '#6366f1',
-          startTime: '10:00',
-          endTime: '11:00'
-        }
-      },
-      {
-        id: 't3',
-        title: 'Tarea 3 - María López',
-        start: targetDate,
-        backgroundColor: '#f97316',
-        borderColor: '#f97316',
-        extendedProps: {
-          calendar: 'Primary',
-          location: 'Centro Operativo',
-          employeeId: 3,
-          employeeName: 'María López',
-
-          employeeColor: '#f97316',
-          startTime: '11:00',
-          endTime: '12:00'
-        }
-      },
-      {
-        id: 't4',
-        title: 'Tarea 4 - Ana García',
-        start: targetDate,
-        backgroundColor: '#10b981',
-        borderColor: '#10b981',
-        extendedProps: {
-          calendar: 'Primary',
-          location: 'Sede Central',
-          employeeId: 1,
-          employeeName: 'Ana García',
-
-          employeeColor: '#10b981',
-          startTime: '12:00',
-          endTime: '13:00'
-        }
-      },
-      {
-        id: 't5',
-        title: 'Tarea 5 - Luis Pérez',
-        start: targetDate,
-        backgroundColor: '#6366f1',
-        borderColor: '#6366f1',
-        extendedProps: {
-          calendar: 'Primary',
-          location: 'Oficina Norte',
-          employeeId: 2,
-          employeeName: 'Luis Pérez',
-
-          employeeColor: '#6366f1',
-          startTime: '13:00',
-          endTime: '14:00'
-        }
-      },
-      {
-        id: 't6',
-        title: 'Tarea 6 - María López',
-        start: targetDate,
-        backgroundColor: '#f97316',
-        borderColor: '#f97316',
-        extendedProps: {
-          calendar: 'Primary',
-          location: 'Centro Operativo',
-          employeeId: 3,
-          employeeName: 'María López',
-
-          employeeColor: '#f97316',
-          startTime: '14:00',
-          endTime: '15:00'
-        }
-      },
-      {
-        id: 't7',
-        title: 'Tarea 7 - Ana García',
-        start: targetDate,
-        backgroundColor: '#10b981',
-        borderColor: '#10b981',
-        extendedProps: {
-          calendar: 'Primary',
-          location: 'Sede Central',
-          employeeId: 1,
-          employeeName: 'Ana García',
-
-          employeeColor: '#10b981',
-          startTime: '15:00',
-          endTime: '16:00'
-        }
-      },
-      {
-        id: 't8',
-        title: 'Tarea 8 - Luis Pérez',
-        start: targetDate,
-        backgroundColor: '#6366f1',
-        borderColor: '#6366f1',
-        extendedProps: {
-          calendar: 'Primary',
-          location: 'Oficina Norte',
-          employeeId: 2,
-          employeeName: 'Luis Pérez',
-
-          employeeColor: '#6366f1',
-          startTime: '16:00',
-          endTime: '17:00'
-        }
-      },
-      {
-        id: 't9',
-        title: 'Tarea 9 - María López',
-        start: targetDate,
-        backgroundColor: '#f97316',
-        borderColor: '#f97316',
-        extendedProps: {
-          calendar: 'Primary',
-          location: 'Centro Operativo',
-          employeeId: 3,
-          employeeName: 'María López',
-
-          employeeColor: '#f97316',
-          startTime: '17:00',
-          endTime: '18:00'
-        }
-      },
-      {
-        id: 't10',
-        title: 'Tarea 10 - Ana García',
-        start: targetDate,
-        backgroundColor: '#10b981',
-        borderColor: '#10b981',
-        extendedProps: {
-          calendar: 'Primary',
-          location: 'Sede Central',
-          employeeId: 1,
-          employeeName: 'Ana García',
-
-          employeeColor: '#10b981',
-          startTime: '18:00',
-          endTime: '19:00'
-        }
-      },
-      {
-        id: '2',
-        title: 'Meeting',
-        start: tomorrow,
-        backgroundColor: '#6366f1',
-        borderColor: '#6366f1',
-        extendedProps: {
-          calendar: 'Success',
-          location: 'Oficina Norte',
-          employeeId: 2,
-          employeeName: 'Luis Pérez',
-
-          employeeColor: '#6366f1',
-          startTime: '10:00',
-          endTime: '12:00'
-        }
-      },
-      {
-        id: '3',
-        title: 'Workshop',
-        start: twoDays,
-        backgroundColor: '#f97316',
-        borderColor: '#f97316',
-        extendedProps: {
-          calendar: 'Primary',
-          location: 'Centro Operativo',
-          employeeId: 3,
-          employeeName: 'María López',
-
-          employeeColor: '#f97316',
-          startTime: '14:00',
-          endTime: '16:00'
-        }
-      }
-    ];
-
-    // Agregar vacaciones aprobadas al calendario
-    this.addApprovedVacationsToCalendar();
-
-    // Guardamos copia completa para filtrar por empleado
-    this.allEvents = [...this.events];
-
-    // Personalización de localización con meses en mayúscula
-    const esLocaleCustom = {
-      ...esLocale,
-      monthNames: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'],
-      monthNamesShort: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'],
-    };
-
+  constructor(
+    private notificationService: NotificationService,
+    private taskService: TaskService,
+    private vacationService: VacationService,
+    private employeeService: EmployeeService,
+    private locationService: LocationService,
+    private authService: AuthService,
+    private supabaseService: SupabaseService,
+    private route: ActivatedRoute,
+    private router: Router,
+    private changeDetectorRef: ChangeDetectorRef
+  ) {
+    // Inicializar calendarOptions inmediatamente para evitar el error "viewType '' is not available"
     this.calendarOptions = {
-      plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
+      plugins: [dayGridPlugin, interactionPlugin],
       initialView: 'dayGridMonth',
-      locale: esLocaleCustom,
+      locale: esLocale,
       headerToolbar: {
         left: 'prev,next today',
         center: 'title',
-        right: 'dayGridMonth,timeGridWeek,timeGridDay'
+        right: 'dayGridMonth'
       },
+      editable: true,
       selectable: true,
-      events: this.events,
+      events: [],
       select: (info) => this.handleDateSelect(info),
       eventClick: (info) => this.handleEventClick(info),
       dateClick: (info) => this.handleDayClick(info.dateStr, info.allDay),
@@ -676,11 +426,222 @@ export class CalenderComponent {
         return 'none';
       },
       eventContent: (arg) => this.renderEventContent(arg),
-      dayCellDidMount: (arg) => this.addMissingLocationIndicator(arg)
+      dayCellDidMount: (arg) => this.addMissingLocationIndicator(arg),
+      datesSet: () => {
+        // Cuando cambias de vista o mes, se vuelven a renderizar las celdas
+        console.log('[CalendarComponent] Vista del calendario cambió, badges deberían actualizarse');
+      }
     };
   }
 
+  async ngOnInit() {
+    this.isCalendarLoading = true;
+    try {
+      // Leer query param employee
+      let employeeParam: number | 'all' = 'all';
+      await new Promise<void>(resolve => {
+        this.route.queryParams.subscribe(params => {
+          if (params['employee']) {
+            const empId = Number(params['employee']);
+            if (!isNaN(empId)) {
+              employeeParam = empId;
+            }
+          }
+          resolve();
+        });
+      });
+
+      // Cargar usuario actual
+      const employee = this.authService.employee;
+      if (employee) {
+        this.currentUser = {
+          id: employee.id,
+          name: employee.name,
+          email: employee.email,
+          color: employee.color,
+          role: employee.role === 'Administrador' ? 'Administrador' : 'Usuario',
+          is_active: true
+        };
+      }
+
+      // Cargar datos desde la base de datos en orden para que tareas conozcan empleados y localizaciones
+      await this.loadEmployees();
+      await this.loadLocations();
+      await this.loadTooltipLocDays(); // Cargar los días configurados para cada localización
+      await this.loadTasks();
+      await this.loadVacationRequests();
+
+      // Si no es admin, forzar filtro del usuario actual
+      if (!this.isAdmin && this.currentUser) {
+        this.selectedEmployeeFilter = this.currentUser.id;
+        this.applyEmployeeFilter();
+      }
+      // Si hay parámetro de empleado y es admin, seleccionarlo y filtrar
+      else if (employeeParam !== 'all') {
+        this.selectedEmployeeFilter = employeeParam;
+        this.applyEmployeeFilter();
+      }
+
+      // Inicializar el calendario
+      this.initializeCalendar();
+
+      // Forzar detección de cambios de Angular
+      this.changeDetectorRef.detectChanges();
+
+      // Dar tiempo para que el calendario renderice las celdas con los datos
+      setTimeout(() => {
+        this.isCalendarLoading = false;
+        console.log('[CalendarComponent] Todos los datos cargados - loading finalizado');
+      }, 200);
+    } catch (error) {
+      console.error('[CalendarComponent] Error inicializando:', error);
+      this.showAlert('error', 'Error', 'No se pudieron cargar los datos del calendario');
+      this.isCalendarLoading = false;
+    }
+  }
+
+  ngAfterViewInit() {
+    // Este hook se ejecuta después de que la vista está lista
+    // pero el loading se maneja en ngOnInit después de cargar los datos
+  }
+
+  async loadEmployees() {
+    try {
+      // Traer todos los empleados, estén activos o no, para asignación
+      this.employees = await this.employeeService.getAllEmployees();
+      console.log('[CalendarComponent] Empleados cargados (todos):', this.employees.length, this.employees);
+    } catch (error) {
+      console.error('[CalendarComponent] Error cargando empleados:', error);
+    }
+  }
+
+  async loadLocations() {
+    try {
+      this.locations = await this.locationService.getAll();
+    } catch (error) {
+      console.error('[CalendarComponent] Error cargando localizaciones:', error);
+    }
+  }
+
+  async loadTooltipLocDays() {
+    try {
+      const result = await this.supabaseService.supabase
+        .from('tooltip_loc_dias')
+        .select('*');
+
+      if (result.error) {
+        console.error('[CalendarComponent] Error cargando tooltip_loc_dias:', result.error);
+        this.tooltipLocDays = [];
+      } else {
+        this.tooltipLocDays = (result.data as TooltipLocDay[]) || [];
+        console.log('[CalendarComponent] tooltip_loc_dias cargados:', this.tooltipLocDays);
+      }
+    } catch (error) {
+      console.error('[CalendarComponent] Error en loadTooltipLocDays:', error);
+      this.tooltipLocDays = [];
+    }
+  }
+
+  async loadTasks() {
+    try {
+      const tasks = await this.taskService.getAll();
+      this.events = tasks.map(task => this.taskToCalendarEvent(task));
+      this.allEvents = [...this.events];
+    } catch (error) {
+      console.error('[CalendarComponent] Error cargando tareas:', error);
+    }
+  }
+
+  async loadVacationRequests() {
+    try {
+      console.log('[CalendarComponent] Cargando solicitudes de vacaciones desde Supabase...');
+      const requests = await this.vacationService.getAll();
+      console.log('[CalendarComponent] Solicitudes obtenidas de la BD:', requests);
+
+      this.vacationRequests = requests.map(req => ({
+        id: req.id,
+        employeeId: req.employee_id,
+        employeeName: this.getEmployeeName(req.employee_id),
+        startDate: req.start_date,
+        endDate: req.end_date,
+        type: req.type,
+        reason: req.reason || '',
+        status: req.status,
+        requestDate: req.request_date || ''
+      }));
+
+      console.log('[CalendarComponent] vacationRequests después de mapear:', this.vacationRequests);
+      console.log('[CalendarComponent] pendingRequests:', this.pendingRequests);
+
+      // Agregar vacaciones aprobadas al calendario
+      this.addApprovedVacationsToCalendar();
+    } catch (error) {
+      console.error('[CalendarComponent] Error cargando solicitudes de vacaciones:', error);
+    }
+  }
+
+  taskToCalendarEvent(task: Task): CalendarEvent {
+    const employee = this.employees.find(e => e.id === task.employee_id);
+    const location = this.locations.find(l => l.id === task.location_id);
+
+    return {
+      id: task.id,
+      title: task.title,
+      start: task.start_date,
+      end: task.end_date || undefined,
+      backgroundColor: employee?.color || '#6366f1',
+      borderColor: employee?.color || '#6366f1',
+      extendedProps: {
+        calendar: task.calendar || 'Primary',
+        location: location?.name,
+        employeeId: task.employee_id || undefined,
+        employeeName: employee?.name,
+        employeeColor: employee?.color,
+        employeeAvatar: employee?.avatar,
+        startTime: task.start_time || undefined,
+        endTime: task.end_time || undefined,
+        isVacation: task.is_vacation,
+        vacationType: task.vacation_type || undefined
+      }
+    };
+  }
+
+  getEmployeeName(employeeId: number): string {
+    return this.employees.find(e => e.id === employeeId)?.name || 'Desconocido';
+  }
+
+  initializeCalendar() {
+    // Crear nuevas opciones de calendario con todos los datos cargados
+    const newCalendarOptions: CalendarOptions = {
+      ...this.calendarOptions,
+      events: this.events,
+      dateClick: (info) => this.handleDayClick(info.dateStr, info.allDay),
+      select: (info) => this.handleDateSelect(info),
+      eventClick: (info) => this.handleEventClick(info),
+      dayMaxEventRows: 3,
+      moreLinkContent: () => ({ html: '<span class="fc-more-text">+ Más tareas</span>' }),
+      moreLinkClick: (args) => {
+        this.openDayEventsModal(args.date.toISOString().split('T')[0]);
+        return 'none';
+      },
+      eventContent: (arg) => this.renderEventContent(arg),
+      dayCellDidMount: (arg) => this.addMissingLocationIndicator(arg)
+    };
+
+    // Reasignar completamente las opciones (importante para que se procese nuevamente)
+    this.calendarOptions = newCalendarOptions;
+
+    console.log('[CalendarComponent] Calendario inicializado. Datos disponibles:');
+    console.log('  - tooltipLocDays:', this.tooltipLocDays.length);
+    console.log('  - eventos:', this.events.length);
+    console.log('  - localizaciones:', this.locations.length);
+  }
+
   handleDateSelect(selectInfo: DateSelectArg) {
+    if (!this.isAdmin) {
+      this.showAlert('warning', 'Acceso Denegado', 'Solo los administradores pueden crear tareas');
+      return;
+    }
     // Siempre mostrar el modal de lista de tareas del día
     this.openDayEventsModal(selectInfo.startStr);
   }
@@ -695,6 +656,12 @@ export class CalenderComponent {
 
     // Si es una vacación, no permitir edición (solo desde gestión de solicitudes)
     if (event.extendedProps['isVacation']) {
+      return;
+    }
+
+    // Si no es admin, no permitir editar eventos
+    if (!this.isAdmin) {
+      this.showAlert('warning', 'Acceso Denegado', 'Solo los administradores pueden editar tareas');
       return;
     }
 
@@ -734,6 +701,9 @@ export class CalenderComponent {
   }
 
   handleAddOrUpdateEvent() {
+    if (this.isAddEventLoading) {
+      return;
+    }
     // Validar que tenga empleado y localización
     if (!this.eventEmployeeId) {
       this.showAlert('warning', 'Empleado requerido', 'Debes seleccionar un empleado para crear una tarea');
@@ -770,10 +740,13 @@ export class CalenderComponent {
     }
 
     // Proceder con la creación/actualización del evento
-    this.proceedWithEventCreation();
+    this.isAddEventLoading = true;
+    this.proceedWithEventCreation().finally(() => {
+      this.isAddEventLoading = false;
+    });
   }
 
-  proceedWithEventCreation() {
+  async proceedWithEventCreation() {
     this.showConflictModal = false;
 
     const employee = this.eventEmployeeId ? this.employees.find(e => e.id === this.eventEmployeeId) : null;
@@ -791,78 +764,94 @@ export class CalenderComponent {
       generatedTitle = `Tarea en ${location.name}`;
     }
 
-    const eventColor = employee?.color || '#6366f1';
-    const calendarApi = this.calendarComponent.getApi();
-
-    if (this.selectedEvent) {
-      // Editar evento existente - Remover y recrear para forzar renderizado correcto
-      const eventToRemove = calendarApi.getEventById(this.selectedEvent.id!);
-      if (eventToRemove) {
-        eventToRemove.remove();
-      }
-
-      const updatedEvent = {
-        id: this.selectedEvent.id,
-        title: generatedTitle,
-        start: this.eventStartDate,
-        end: this.eventEndDate,
-        backgroundColor: eventColor,
-        borderColor: eventColor,
-        extendedProps: {
+    try {
+      if (this.selectedEvent) {
+        // Actualizar tarea existente en la base de datos
+        await this.taskService.update(this.selectedEvent.id!, {
+          title: generatedTitle,
+          start_date: this.eventStartDate,
+          end_date: this.eventEndDate || null,
+          start_time: this.eventStartTime,
+          end_time: this.eventEndTime,
           calendar: 'Primary',
-          location: this.eventLocation,
-          employeeId: this.eventEmployeeId,
-          employeeName: employee?.name,
-
-          employeeColor: employee?.color,
-          startTime: this.eventStartTime,
-          endTime: this.eventEndTime
-        }
-      };
-
-      // Actualizar en los arrays locales y en el calendario
-      this.allEvents = this.allEvents.map(ev =>
-        ev.id === this.selectedEvent!.id ? updatedEvent : ev
-      );
-      this.applyEmployeeFilter();
-    } else {
-      // Crear nuevo evento usando la API de FullCalendar
-      const newEvent = {
-        id: Date.now().toString(),
-        title: generatedTitle,
-        start: this.eventStartDate,
-        end: this.eventEndDate,
-        backgroundColor: eventColor,
-        borderColor: eventColor,
-        extendedProps: {
-          calendar: 'Primary',
-          location: this.eventLocation,
-          employeeId: this.eventEmployeeId,
-          employeeName: employee?.name,
-
-          employeeColor: employee?.color,
-          startTime: this.eventStartTime,
-          endTime: this.eventEndTime
-        }
-      };
-      this.allEvents = [...this.allEvents, newEvent];
-      this.applyEmployeeFilter();
-
-      // Enviar notificación al empleado asignado
-      if (employee && this.currentUser && employee.id !== this.currentUser.id) {
-        this.notificationService.addNotification({
-          type: 'task',
-          title: `Nueva tarea asignada`,
-          message: `${this.currentUser.name} te ha asignado una tarea: "${generatedTitle}"`,
-          recipient_email: employee.email,
-          data: { eventId: newEvent.id }
+          location_id: location?.id || null,
+          employee_id: this.eventEmployeeId || null,
+          is_vacation: false,
+          vacation_type: null
         });
-      }
-    }
 
-    this.closeModal();
-    this.resetModalFields();
-    this.showAlert('success', 'Tarea creada', 'La tarea se ha registrado correctamente');
+        // Recargar tareas
+        await this.loadTasks();
+        this.applyEmployeeFilter();
+
+        // Forzar re-renderizado del calendario cambiando vista temporalmente
+        this.forceCalendarRefresh();
+
+        this.showAlert('success', 'Tarea actualizada', 'La tarea se ha actualizado correctamente');
+      } else {
+        // Crear nueva tarea en la base de datos
+        const newTask = await this.taskService.create({
+          title: generatedTitle,
+          start_date: this.eventStartDate,
+          end_date: this.eventEndDate || null,
+          start_time: this.eventStartTime,
+          end_time: this.eventEndTime,
+          calendar: 'Primary',
+          level: null,
+          location_id: location?.id || null,
+          employee_id: this.eventEmployeeId || null,
+          description: null,
+          created_by_employee_id: this.currentUser?.id || null,
+          is_vacation: false,
+          vacation_type: null
+        });
+
+        // Recargar tareas desde la base de datos para asegurar consistencia
+        await this.loadTasks();
+        this.applyEmployeeFilter();
+
+        // Forzar re-renderizado del calendario cambiando vista temporalmente
+        this.forceCalendarRefresh();
+
+        // Enviar notificación al empleado asignado (siempre, incluso si es el mismo usuario)
+        console.log('[CalendarComponent] Verificando si enviar notificación...');
+        console.log('[CalendarComponent] Employee:', employee);
+        console.log('[CalendarComponent] CurrentUser:', this.currentUser);
+
+        if (employee && employee.email) {
+          const isSelfAssignment = this.currentUser && employee.id === this.currentUser.id;
+          const message = isSelfAssignment
+            ? `Te has asignado una nueva tarea: "${generatedTitle}"`
+            : `${this.currentUser?.name || 'Alguien'} te ha asignado una tarea: "${generatedTitle}"`;
+
+          console.log('[CalendarComponent] ✅ Enviando notificación a:', employee.email);
+          console.log('[CalendarComponent] Tipo de asignación:', isSelfAssignment ? 'Auto-asignación' : 'Asignación a otro');
+
+          try {
+            await this.notificationService.addNotification({
+              type: 'task',
+              title: `Nueva tarea asignada`,
+              message: message,
+              recipient_email: employee.email,
+              data: { eventId: newTask.id }
+            });
+            console.log('[CalendarComponent] ✅ Notificación enviada exitosamente');
+          } catch (notifError) {
+            console.error('[CalendarComponent] ❌ Error enviando notificación:', notifError);
+          }
+        } else {
+          console.log('[CalendarComponent] ⚠️ No se envió notificación. Razón:', !employee ? 'No hay empleado asignado' : 'No hay email del empleado');
+        }
+
+        this.showAlert('success', 'Tarea creada', 'La tarea se ha registrado correctamente');
+      }
+
+      this.closeModal();
+      this.resetModalFields();
+    } catch (error) {
+      console.error('[CalendarComponent] Error guardando tarea:', error);
+      this.showAlert('error', 'Error', 'No se pudo guardar la tarea');
+    }
   }
 
   rejectEventCreation() {
@@ -919,8 +908,8 @@ export class CalenderComponent {
       title: ev.title,
       location: ev.extendedProps['location'],
       employeeName: ev.extendedProps['employeeName'],
-
       employeeColor: ev.extendedProps['employeeColor'],
+      employeeAvatar: ev.extendedProps['employeeAvatar'],
       startTime: ev.extendedProps['startTime'],
       endTime: ev.extendedProps['endTime'],
       isVacation: ev.extendedProps['isVacation'] || false,
@@ -979,10 +968,79 @@ export class CalenderComponent {
       return;
     }
 
-    ev.remove();
-    this.events = this.events.filter(e => e.id !== eventId);
-    if (this.selectedDay) {
-      this.openDayEventsModal(this.selectedDay);
+    // Abrir modal de confirmación personalizado
+    this.openDeleteConfirmation(eventId, ev.title);
+  }
+
+  /**
+   * Abre el modal de confirmación para eliminar tarea
+   */
+  openDeleteConfirmation(taskId: string, taskTitle: string) {
+    // Cerrar el modal de la lista de tareas si está abierto
+    this.isDayModalOpen = false;
+
+    this.deleteConfirmation = {
+      isOpen: true,
+      taskId: taskId,
+      taskTitle: taskTitle
+    };
+  }
+
+  /**
+   * Cierra el modal de confirmación
+   */
+  closeDeleteConfirmation() {
+    const dayToReopen = this.selectedDay; // Guardar antes de cerrar
+
+    this.deleteConfirmation = {
+      isOpen: false,
+      taskId: null,
+      taskTitle: ''
+    };
+
+    // Reabrir el modal de la lista de tareas si estaba abierto
+    if (dayToReopen) {
+      this.isDayModalOpen = true;
+    }
+  }
+
+  /**
+   * Confirma y ejecuta la eliminación de la tarea
+   */
+  async confirmDeleteTask() {
+    if (this.deleteConfirmation.taskId === null) return;
+
+    const taskId = this.deleteConfirmation.taskId;
+    const dayToReload = this.selectedDay; // Guardar antes de cerrar
+
+    // Cerrar el modal de confirmación inmediatamente
+    this.closeDeleteConfirmation();
+
+    try {
+      // Eliminar de la base de datos
+      await this.taskService.delete(taskId);
+
+      // Eliminar del calendario
+      const calendarApi = this.calendarComponent.getApi();
+      const ev = calendarApi.getEventById(taskId);
+      if (ev) {
+        ev.remove();
+      }
+      this.events = this.events.filter(e => e.id !== taskId);
+      this.allEvents = this.allEvents.filter(e => e.id !== taskId); // También actualizar allEvents
+
+      // Forzar re-renderizado del calendario cambiando vista temporalmente
+      this.forceCalendarRefresh();
+
+      // Recargar la vista del modal si estaba abierto
+      if (dayToReload) {
+        this.openDayEventsModal(dayToReload);
+      }
+
+      this.showAlert('success', 'Tarea eliminada', 'La tarea se ha eliminado correctamente');
+    } catch (error) {
+      console.error('Error al eliminar tarea:', error);
+      this.showAlert('error', 'Error al eliminar', 'No se pudo eliminar la tarea. Por favor, inténtalo de nuevo.');
     }
   }
 
@@ -1004,6 +1062,10 @@ export class CalenderComponent {
   }
 
   handleEmployeeFilterChange(value: string) {
+    // Los usuarios no-admin no pueden cambiar el filtro
+    if (!this.isAdmin) {
+      return;
+    }
     this.selectedEmployeeFilter = value === 'all' ? 'all' : Number(value);
     this.applyEmployeeFilter();
   }
@@ -1040,10 +1102,11 @@ export class CalenderComponent {
 
   renderEventContent(eventInfo: any) {
     const employeeName = eventInfo.event.extendedProps.employeeName;
+    const employeeAvatar = eventInfo.event.extendedProps.employeeAvatar;
     const location = eventInfo.event.extendedProps.location;
     const startTime = eventInfo.event.extendedProps.startTime;
     const endTime = eventInfo.event.extendedProps.endTime;
-    const timeText = startTime && endTime ? `${startTime}-${endTime}` : '';
+    const timeText = startTime && endTime ? `${this.formatTimeWithoutSeconds(startTime)}-${this.formatTimeWithoutSeconds(endTime)}` : '';
     const bgColor = eventInfo.event.backgroundColor || '#6366f1';
     const isVacation = eventInfo.event.extendedProps.isVacation;
     const vacationType = eventInfo.event.extendedProps.vacationType;
@@ -1061,15 +1124,20 @@ export class CalenderComponent {
       };
     }
 
-    // Renderizado normal para tareas
+    // Renderizado normal para tareas con avatar
+    const avatarHtml = employeeAvatar
+      ? `<img src="${employeeAvatar}" alt="${employeeName}" class="w-5 h-5 rounded-full object-cover border border-white/20" style="flex-shrink: 0;">`
+      : `<div class="w-5 h-5 rounded-full flex items-center justify-center text-white text-xs font-bold" style="background-color: rgba(255,255,255,0.2); flex-shrink: 0;">${employeeName ? employeeName[0] : 'T'}</div>`;
+
     return {
       html: `
         <div class="flex flex-col gap-0.5 p-1 text-xs" style="background-color: ${bgColor}; border-radius: 4px; color: white;">
           <div class="flex items-center gap-1 min-h-[20px]">
+            ${avatarHtml}
             <span class="font-semibold truncate">${employeeName || 'Tarea'}</span>
           </div>
-          ${location ? `<div class="truncate text-white/90">📍 ${location}</div>` : ''}
-          ${timeText ? `<div class="truncate text-white/90">🕐 ${timeText}</div>` : ''}
+          ${location ? `<div class="truncate text-white/90 pl-6">📍 ${location}</div>` : ''}
+          ${timeText ? `<div class="truncate text-white/90 pl-6">🕐 ${timeText}</div>` : ''}
         </div>
       `
     };
@@ -1087,8 +1155,9 @@ export class CalenderComponent {
 
     // Buscar eventos del mismo empleado en el mismo día
     const conflictingEvent = this.allEvents.find(event => {
-      if (event.id === this.selectedEvent?.id) {
-        return false; // Ignorar el evento actual si lo estamos editando
+      // Ignorar el evento actual si lo estamos editando (comparar tanto con selectedEvent como con el ID)
+      if (this.selectedEvent && (event.id === this.selectedEvent.id || String(event.id) === String(this.selectedEvent.id))) {
+        return false;
       }
 
       if (event.extendedProps.employeeId !== this.eventEmployeeId) {
@@ -1125,6 +1194,33 @@ export class CalenderComponent {
 
   dismissAlert(id: number) {
     this.alerts = this.alerts.filter(alert => alert.id !== id);
+  }
+
+  /**
+   * Fuerza la actualización del calendario cambiando temporalmente la vista
+   * Esto re-ejecuta dayCellDidMount y actualiza los badges
+   */
+  private forceCalendarRefresh() {
+    const calendarApi = this.calendarComponent.getApi();
+    const currentView = calendarApi.view.type;
+
+    // Cambiar a una vista temporal y volver inmediatamente
+    const tempView = currentView === 'dayGridMonth' ? 'timeGridWeek' : 'dayGridMonth';
+    calendarApi.changeView(tempView);
+
+    // Usar setTimeout para asegurar que el cambio se procesa
+    setTimeout(() => {
+      calendarApi.changeView(currentView);
+    }, 10);
+  }
+
+  /**
+   * Formatea una hora quitando los segundos (HH:MM:SS -> HH:MM)
+   */
+  formatTimeWithoutSeconds(time: string | undefined): string {
+    if (!time) return '';
+    const parts = time.split(':');
+    return parts.length >= 2 ? `${parts[0]}:${parts[1]}` : time;
   }
 
   exportToGoogleCalendar() {
@@ -1195,7 +1291,9 @@ export class CalenderComponent {
     this.isVacationModalOpen = false;
   }
 
-  openVacationManagement() {
+  async openVacationManagement() {
+    // Recargar solicitudes de vacaciones antes de abrir el modal
+    await this.loadVacationRequests();
     this.isVacationManagementOpen = true;
   }
 
@@ -1237,104 +1335,204 @@ export class CalenderComponent {
     return this.vacationRequests.filter(r => r.status === 'approved' && this.isDatePast(r.endDate));
   }
 
-  submitVacationRequest() {
-    if (!this.vacationStartDate || !this.vacationEndDate || !this.vacationReason.trim()) {
-      this.showAlert('warning', 'Campos incompletos', 'Debes completar todos los campos para solicitar vacaciones');
+  async submitVacationRequest() {
+      if (this.isVacationSubmitting) return;
+      // Validación de campos vacíos
+      if (!this.vacationStartDate || !this.vacationEndDate || !this.vacationReason.trim()) {
+        let msg = 'Debes completar todos los campos para solicitar vacaciones.';
+        if (!this.vacationStartDate) msg = 'Debes seleccionar la fecha de inicio.';
+        else if (!this.vacationEndDate) msg = 'Debes seleccionar la fecha de fin.';
+        else if (!this.vacationReason.trim()) msg = 'Debes indicar el motivo de la solicitud.';
+        this.showAlert('warning', 'Campos incompletos', msg);
+        return;
+      }
+
+      // Validación de fechas
+      const start = new Date(this.vacationStartDate);
+      const end = new Date(this.vacationEndDate);
+      if (start > end) {
+        this.showAlert('error', 'Fechas incorrectas', 'La fecha de inicio no puede ser posterior a la fecha de fin.');
+        return;
+      }
+
+      // Validación de solapamiento con vacaciones existentes
+      const overlapping = this.vacationRequests.some(r =>
+        r.employeeId === this.currentUser?.id &&
+        r.status === 'approved' &&
+        ((new Date(r.startDate) <= end && new Date(r.endDate) >= start))
+      );
+      if (overlapping) {
+        this.showAlert('error', 'Ya tienes vacaciones', 'Ya tienes vacaciones aprobadas en los días seleccionados.');
+        return;
+      }
+
+      if (!this.currentUser) return;
+
+      this.isVacationSubmitting = true;
+      try {
+        const newRequest = await this.vacationService.create({
+          employee_id: this.currentUser.id,
+          start_date: this.vacationStartDate,
+          end_date: this.vacationEndDate,
+          type: this.vacationType,
+          reason: this.vacationReason,
+          status: 'pending'
+        });
+
+        // Recargar solicitudes
+        await this.loadVacationRequests();
+
+        // Enviar notificación a todos los administradores
+        const admins = this.employees.filter(emp => emp.role === 'Administrador');
+        for (const admin of admins) {
+          await this.notificationService.addNotification({
+            type: 'vacation-request',
+            title: 'Nueva solicitud de vacaciones',
+            message: `${this.currentUser.name} ha solicitado ${this.vacationType === 'vacation' ? 'vacaciones' : 'un día libre'} del ${this.formatDate(this.vacationStartDate)} al ${this.formatDate(this.vacationEndDate)}`,
+            recipient_email: admin.email,
+            data: { requestId: newRequest.id }
+          });
+        }
+
+        this.showAlert('success', 'Solicitud enviada', 'Tu solicitud de vacaciones ha sido enviada al administrador');
+        this.closeVacationModal();
+      } catch (error) {
+        console.error('[CalendarComponent] Error creando solicitud de vacaciones:', error);
+        this.showAlert('error', 'Error', 'No se pudo enviar la solicitud');
+      } finally {
+        this.isVacationSubmitting = false;
+      }
+    }
+
+
+  clearVacationAlerts() {
+    this.alerts = [];
+  }
+
+  async approveVacationRequest(requestId: number) {
+    console.log('[CalendarComponent] approveVacationRequest called with requestId:', requestId);
+    this.vacationDecisionModal = {
+      isOpen: true,
+      requestId,
+      action: 'approve',
+      sendEmail: true,
+      emailComment: '',
+      isLoading: false
+    };
+    console.log('[CalendarComponent] vacationDecisionModal after update:', this.vacationDecisionModal);
+    this.changeDetectorRef.detectChanges();
+  }
+
+  async rejectVacationRequest(requestId: number) {
+    console.log('[CalendarComponent] rejectVacationRequest called with requestId:', requestId);
+    this.vacationDecisionModal = {
+      isOpen: true,
+      requestId,
+      action: 'reject',
+      sendEmail: true,
+      emailComment: '',
+      isLoading: false
+    };
+    console.log('[CalendarComponent] vacationDecisionModal after update:', this.vacationDecisionModal);
+    this.changeDetectorRef.detectChanges();
+  }
+
+  async confirmVacationDecision() {
+    const { requestId, action, sendEmail, emailComment } = this.vacationDecisionModal;
+    if (!requestId || !action || !this.currentUser) {
+      this.closeVacationDecisionModal();
       return;
     }
 
-    if (!this.currentUser) return;
+    const request = this.vacationRequests.find(r => r.id === requestId);
+    if (!request) {
+      this.closeVacationDecisionModal();
+      return;
+    }
 
-    const newRequest: VacationRequest = {
-      id: this.vacationRequests.length + 1,
-      employeeId: this.currentUser.id,
-      employeeName: this.currentUser.name,
+    // Establecer estado de carga
+    this.vacationDecisionModal.isLoading = true;
+    this.changeDetectorRef.detectChanges();
 
-      startDate: this.vacationStartDate,
-      endDate: this.vacationEndDate,
-      type: this.vacationType,
-      reason: this.vacationReason,
-      status: 'pending',
-      requestDate: new Date().toISOString().split('T')[0]
-    };
+    try {
+      if (action === 'approve') {
+        await this.vacationService.approve(
+          requestId,
+          this.currentUser.id,
+          sendEmail ? emailComment : undefined
+        );
+        request.status = 'approved';
+        this.addVacationToCalendar(request);
+        this.showAlert('success', 'Solicitud aprobada', `La solicitud de ${request.employeeName} ha sido aprobada`);
+        this.changeDetectorRef.detectChanges();
+      } else if (action === 'reject') {
+        await this.vacationService.reject(
+          requestId,
+          this.currentUser.id,
+          sendEmail ? emailComment : undefined
+        );
+        request.status = 'rejected';
+        this.showAlert('info', 'Solicitud rechazada', `La solicitud de ${request.employeeName} ha sido rechazada`);
+        this.changeDetectorRef.detectChanges();
+      }
 
-    this.vacationRequests = [...this.vacationRequests, newRequest];
-
-    // Enviar notificación a todos los administradores
-    if (this.currentUser) {
-      const admins = this.employees.filter(emp => emp.rol === 'Administrador');
-      admins.forEach(admin => {
-        this.notificationService.addNotification({
+      // Notificar al empleado (en la app)
+      const requestEmployee = this.employees.find(e => e.id === request.employeeId);
+      if (requestEmployee) {
+        const actionText = action === 'approve' ? 'aprobada' : 'rechazada';
+        const typeText = request.type === 'vacation' ? 'vacaciones' : 'día libre';
+        await this.notificationService.addNotification({
           type: 'vacation-request',
-          title: 'Nueva solicitud de vacaciones',
-          message: `${this.currentUser!.name} ha solicitado ${this.vacationType === 'vacation' ? 'vacaciones' : 'un día libre'} del ${this.formatDate(this.vacationStartDate)} al ${this.formatDate(this.vacationEndDate)}`,
-          recipient_email: admin.email,
-          data: { requestId: newRequest.id }
+          title: `Solicitud ${actionText}`,
+          message: `Tu solicitud de ${typeText} del ${this.formatDate(request.startDate)} al ${this.formatDate(request.endDate)} ha sido ${actionText}`,
+          recipient_email: requestEmployee.email,
+          data: { requestId: request.id }
         });
-      });
+      }
+    } catch (error) {
+      console.error('[CalendarComponent] Error en decisión de vacación:', error);
+      this.showAlert('error', 'Error', 'No se pudo procesar la decisión');
+    } finally {
+      this.vacationDecisionModal.isLoading = false;
+      this.changeDetectorRef.detectChanges();
+      this.closeVacationDecisionModal();
     }
-
-    this.showAlert('success', 'Solicitud enviada', 'Tu solicitud de vacaciones ha sido enviada al administrador');
-    this.closeVacationModal();
   }
 
-  approveVacationRequest(requestId: number) {
+  closeVacationDecisionModal() {
+    this.vacationDecisionModal = {
+      isOpen: false,
+      requestId: null,
+      action: null,
+      sendEmail: false,
+      emailComment: '',
+      isLoading: false
+    };
+    this.changeDetectorRef.detectChanges();
+  }
+
+  async deleteVacationRequest(requestId: number) {
     const request = this.vacationRequests.find(r => r.id === requestId);
     if (!request) return;
 
-    request.status = 'approved';
-    this.addVacationToCalendar(request);
+    try {
+      // Eliminar del calendario si estaba aprobada
+      if (request.status === 'approved') {
+        this.removeVacationFromCalendar(request);
+      }
 
-    // Notificar al empleado
-    const requestEmployee = this.employees.find(e => e.id === request.employeeId);
-    if (this.currentUser && requestEmployee) {
-      this.notificationService.addNotification({
-        type: 'vacation-request',
-        title: 'Solicitud aprobada',
-        message: `Tu solicitud de ${request.type === 'vacation' ? 'vacaciones' : 'día libre'} del ${this.formatDate(request.startDate)} al ${this.formatDate(request.endDate)} ha sido aprobada`,
-        recipient_email: requestEmployee.email,
-        data: { requestId: request.id }
-      });
+      await this.vacationService.delete(requestId);
+      this.vacationRequests = this.vacationRequests.filter(r => r.id !== requestId);
+      this.showAlert('info', 'Solicitud eliminada', 'La solicitud ha sido eliminada');
+    } catch (error) {
+      console.error('[CalendarComponent] Error eliminando solicitud:', error);
+      this.showAlert('error', 'Error', 'No se pudo eliminar la solicitud');
     }
-
-    this.showAlert('success', 'Solicitud aprobada', `La solicitud de ${request.employeeName} ha sido aprobada`);
-  }
-
-  rejectVacationRequest(requestId: number) {
-    const request = this.vacationRequests.find(r => r.id === requestId);
-    if (!request) return;
-
-    request.status = 'rejected';
-
-    // Notificar al empleado
-    const requestEmployee = this.employees.find(e => e.id === request.employeeId);
-    if (this.currentUser && requestEmployee) {
-      this.notificationService.addNotification({
-        type: 'vacation-request',
-        title: 'Solicitud rechazada',
-        message: `Tu solicitud de ${request.type === 'vacation' ? 'vacaciones' : 'día libre'} del ${this.formatDate(request.startDate)} al ${this.formatDate(request.endDate)} ha sido rechazada`,
-        recipient_email: requestEmployee.email,
-        data: { requestId: request.id }
-      });
-    }
-
-    this.showAlert('info', 'Solicitud rechazada', `La solicitud de ${request.employeeName} ha sido rechazada`);
-  }
-
-  deleteVacationRequest(requestId: number) {
-    const request = this.vacationRequests.find(r => r.id === requestId);
-    if (!request) return;
-
-    // Eliminar del calendario si estaba aprobada
-    if (request.status === 'approved') {
-      this.removeVacationFromCalendar(request);
-    }
-
-    this.vacationRequests = this.vacationRequests.filter(r => r.id !== requestId);
-    this.showAlert('info', 'Solicitud eliminada', 'La solicitud ha sido eliminada');
   }
 
   private addApprovedVacationsToCalendar() {
+    // Eliminar eventos de vacaciones previos
+    this.allEvents = this.allEvents.filter(ev => !(ev.extendedProps && ev.extendedProps.isVacation));
     const approvedRequests = this.vacationRequests.filter(r => r.status === 'approved');
     approvedRequests.forEach(request => {
       this.addVacationToCalendar(request);
@@ -1400,7 +1598,7 @@ export class CalenderComponent {
   }
 
   get isAdmin(): boolean {
-    return this.currentUser?.rol === 'Administrador';
+    return this.currentUser?.role === 'Administrador';
   }
 
   private formatDate(dateStr: string): string {
@@ -1555,141 +1753,285 @@ export class CalenderComponent {
   }
 
   // Verificar si faltan localizaciones por cubrir en un día
-  private hasMissingLocations(dateStr: string): { hasMissing: boolean; count: number; missingLocations: string[] } {
-    const calendarApi = this.calendarComponent?.getApi();
-    if (!calendarApi) return { hasMissing: false, count: 0, missingLocations: [] };
+  private hasMissingLocations(date: Date): { hasMissing: boolean; count: number; missingLocations: string[] } {
+    try {
+      // Obtener el día de la semana directamente del objeto Date recibido
+      const dayOfWeek = date.getDay(); // 0=Domingo, 1=Lunes, etc.
+      const dateStr = date.toISOString().split('T')[0];
 
-    const selectedDate = new Date(dateStr + 'T00:00:00');
+      // Log para debug
+      const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+      console.log(`[hasMissingLocations] ${dateStr} es ${dayNames[dayOfWeek]} (dayOfWeek=${dayOfWeek})`);
 
-    const eventsForDay = calendarApi.getEvents().filter(ev => {
-      if (!ev.start) return false;
+      const selectedDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
 
-      const eventStart = new Date(ev.start);
+      // Usar this.events directamente en lugar del API de FullCalendar
+      const eventsForDay = this.events.filter(ev => {
+        if (!ev.start) return false;
 
-      // Si el evento tiene una fecha de fin
-      if (ev.end) {
-        const eventEnd = new Date(ev.end);
-        // Para eventos de día completo (allDay), la fecha de fin es exclusiva
-        if (ev.allDay) {
-          eventEnd.setDate(eventEnd.getDate() - 1);
+        // Normalizar la fecha de inicio a Date
+        let eventStart: Date;
+        if (typeof ev.start === 'string') {
+          eventStart = new Date(ev.start);
+        } else if (ev.start instanceof Date) {
+          eventStart = ev.start;
+        } else {
+          return false; // Tipo no soportado
         }
 
-        // Verificar si la fecha seleccionada está dentro del rango del evento
-        return selectedDate >= new Date(eventStart.toDateString()) &&
-               selectedDate <= new Date(eventEnd.toDateString());
+        // Si el evento tiene una fecha de fin
+        if (ev.end) {
+          // Normalizar la fecha de fin a Date
+          let eventEnd: Date;
+          if (typeof ev.end === 'string') {
+            eventEnd = new Date(ev.end);
+          } else if (ev.end instanceof Date) {
+            eventEnd = ev.end;
+          } else {
+            return false; // Tipo no soportado
+          }
+
+          // Para eventos de día completo (allDay), la fecha de fin es exclusiva
+          if (ev.allDay) {
+            eventEnd.setDate(eventEnd.getDate() - 1);
+          }
+
+          // Verificar si la fecha seleccionada está dentro del rango del evento
+          return selectedDate >= new Date(eventStart.toDateString()) &&
+                 selectedDate <= new Date(eventEnd.toDateString());
+        }
+
+        // Si no hay fecha de fin, solo verificar la fecha de inicio
+        const startStr = typeof ev.start === 'string'
+          ? ev.start.split('T')[0]
+          : (ev.start instanceof Date ? this.formatLocalDate(ev.start) : '');
+        return startStr === dateStr;
+      });
+
+      // Filtrar solo tareas (no vacaciones)
+      const tasks = eventsForDay.filter(ev => {
+        const isVacation = ev.extendedProps['isVacation'] || false;
+        return !isVacation && ev.title; // Solo contar tareas válidas
+      });
+
+      // Obtener las localizaciones que tienen tareas asignadas ese día
+      const assignedLocations = new Set<number>();
+      tasks.forEach(ev => {
+        // Encontrar el ID de la localización basado en el nombre
+        const location = this.locations.find(loc => loc.name === ev.extendedProps['location']);
+        if (location) {
+          assignedLocations.add(location.id);
+        }
+      });
+
+      // Obtener solo las localizaciones que tienen ESTE DÍA configurado en tooltip_loc_dias
+      // Soportar tanto 0 como 7 para domingo (compatibilidad con diferentes formatos de BD)
+      const configuradosParaEsteDia = this.tooltipLocDays.filter(
+        tooltipDay => tooltipDay.day === dayOfWeek || (dayOfWeek === 0 && tooltipDay.day === 7) || (dayOfWeek === 7 && tooltipDay.day === 0)
+      );
+
+      // Si no hay localizaciones configuradas para este día, no mostrar badge
+      if (configuradosParaEsteDia.length === 0) {
+        return { hasMissing: false, count: 0, missingLocations: [] };
       }
 
-      // Si no hay fecha de fin, solo verificar la fecha de inicio
-      const day = this.formatLocalDate(ev.start);
-      return day === dateStr;
-    });
+      // Verificar cuáles localizaciones configuradas para este día NO tienen tarea asignada
+      const missingLocations: string[] = [];
+      configuradosParaEsteDia.forEach(tooltipDay => {
+        // Si esta localización NO tiene tarea asignada
+        if (!assignedLocations.has(tooltipDay.locations_id)) {
+          // Obtener el nombre de la localización
+          const location = this.locations.find(loc => loc.id === tooltipDay.locations_id);
+          if (location) {
+            missingLocations.push(location.name);
+          }
+        }
+      });
 
-    // Filtrar solo tareas (no vacaciones)
-    const tasks = eventsForDay.filter(ev => {
-      const isVacation = ev.extendedProps['isVacation'] || false;
-      return !isVacation;
-    });
-
-    // Obtener las localizaciones que tienen tareas asignadas ese día
-    const assignedLocations = new Set<string>();
-    tasks.forEach(ev => {
-      const location = ev.extendedProps['location'];
-      if (location && location.trim() !== '') {
-        assignedLocations.add(location);
+      // Logging detallado
+      if (missingLocations.length > 0 || configuradosParaEsteDia.length > 0) {
+        console.log(`[hasMissingLocations] ${dateStr} (día ${dayOfWeek}):`, {
+          configurados: configuradosParaEsteDia.length,
+          tareas: tasks.length,
+          faltantes: missingLocations.length,
+          missingLocations: missingLocations,
+          tooltipLocDays: this.tooltipLocDays
+        });
       }
-    });
 
-    // Obtener todas las localizaciones disponibles
-    const allLocationNames = this.locations.map(loc => loc.name);
-
-    // Encontrar las localizaciones que NO tienen tareas asignadas
-    const missingLocations = allLocationNames.filter(loc => !assignedLocations.has(loc));
-
-    return {
-      hasMissing: missingLocations.length > 0,
-      count: missingLocations.length,
-      missingLocations: missingLocations
-    };
+      return {
+        hasMissing: missingLocations.length > 0,
+        count: missingLocations.length,
+        missingLocations: missingLocations
+      };
+    } catch (error) {
+      console.error('[CalendarComponent] Error en hasMissingLocations:', error);
+      return { hasMissing: false, count: 0, missingLocations: [] };
+    }
   }
 
   // Agregar indicador visual en los días donde faltan localizaciones por cubrir
   private addMissingLocationIndicator(arg: any) {
-    const dateStr = arg.date.toISOString().split('T')[0];
-    const { hasMissing, count, missingLocations } = this.hasMissingLocations(dateStr);
-
-    if (hasMissing) {
-      // Buscar el elemento day-top para agregar el badge
-      const dayTop = arg.el.querySelector('.fc-daygrid-day-top');
-      if (!dayTop) {
+    try {
+      // Solo mostrar indicador de localizaciones faltantes si el usuario es administrador
+      if (!this.isAdmin) {
         return;
       }
 
-      // Crear el badge (icono circular rojo con !)
-      const badge = document.createElement('div');
-      badge.className = 'missing-location-badge';
-      badge.innerHTML = '!';
-      badge.style.position = 'absolute';
-      badge.style.top = '4px';
-      badge.style.right = '4px';
-      badge.style.width = '14px';
-      badge.style.height = '14px';
-      badge.style.backgroundColor = '#ef4444';
-      badge.style.borderRadius = '50%';
-      badge.style.color = 'white';
-      badge.style.fontSize = '9px';
-      badge.style.fontWeight = 'bold';
-      badge.style.display = 'flex';
-      badge.style.alignItems = 'center';
-      badge.style.justifyContent = 'center';
-      badge.style.zIndex = '10';
-      badge.style.cursor = 'help';
-      badge.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.2)';
+      const dateStr = arg.date.toISOString().split('T')[0];
+      const dayOfWeek = arg.date.getDay();
+      const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+      console.log(`[addMissingLocationIndicator] Procesando celda: ${dateStr} (${dayNames[dayOfWeek]}, dayOfWeek=${dayOfWeek})`);
 
-      dayTop.appendChild(badge);
+      const { hasMissing, count, missingLocations } = this.hasMissingLocations(arg.date);
 
-      // Crear el contenido del tooltip con viñetas
-      const locationsList = missingLocations.map(loc => `• ${loc}`).join('<br>');
-      const tooltipContent = '<strong>Faltan tareas:</strong><br>' + locationsList;
-
-      // Variable para mantener referencia al tooltip
-      let tooltip: HTMLElement | null = null;
-
-      // Evento mouseenter solo en el badge - mostrar tooltip
-      badge.addEventListener('mouseenter', (e: MouseEvent) => {
-        // Crear tooltip
-        tooltip = document.createElement('div');
-        tooltip.className = 'missing-locations-tooltip';
-        tooltip.innerHTML = tooltipContent;
-        tooltip.style.position = 'fixed';
-        tooltip.style.zIndex = '99999';
-        tooltip.style.backgroundColor = '#fee2e2';
-        tooltip.style.color = '#991b1b';
-        tooltip.style.padding = '12px 16px';
-        tooltip.style.borderRadius = '8px';
-        tooltip.style.border = '1px solid #fecaca';
-        tooltip.style.boxShadow = '0 4px 12px rgba(239, 68, 68, 0.5)';
-        tooltip.style.minWidth = '180px';
-
-        document.body.appendChild(tooltip);
-
-        // Posicionar el tooltip encima del badge
-        const rect = badge.getBoundingClientRect();
-        const tooltipRect = tooltip.getBoundingClientRect();
-
-        const left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
-        const top = rect.top - tooltipRect.height - 12;
-
-        tooltip.style.left = Math.max(10, left) + 'px';
-        tooltip.style.top = Math.max(10, top) + 'px';
-      });
-
-      // Evento mouseleave del badge - ocultar tooltip
-      badge.addEventListener('mouseleave', () => {
-        if (tooltip && tooltip.parentNode) {
-          tooltip.parentNode.removeChild(tooltip);
-          tooltip = null;
+      if (hasMissing && missingLocations.length > 0) {
+        // Verificar si ya existe un badge en este elemento (evitar duplicados)
+        if (arg.el.querySelector('.missing-location-badge')) {
+          return;
         }
-      });
+
+        // Buscar el elemento day-top (solo existe en vista mensual)
+        let container = arg.el.querySelector('.fc-daygrid-day-top');
+
+        // Si no se encuentra (vista semanal u otra), usar el elemento raíz
+        if (!container) {
+          // En vistas que no son dayGrid, usar el frame o el elemento raíz
+          container = arg.el.querySelector('.fc-daygrid-day-frame') ||
+                      arg.el.querySelector('.fc-timegrid-col-frame') ||
+                      arg.el;
+        }
+
+        // Asegurarse de que el contenedor tenga posición relativa
+        if (container.style) {
+          container.style.position = 'relative';
+        }
+
+        // Crear el badge (icono circular rojo con !)
+        const badge = document.createElement('div');
+        badge.className = 'missing-location-badge';
+        badge.setAttribute('data-date', dateStr);
+        badge.setAttribute('data-missing-count', count.toString());
+        badge.innerHTML = '!';
+        badge.style.position = 'absolute';
+        badge.style.top = '4px';
+        badge.style.right = '4px';
+        badge.style.width = '16px';
+        badge.style.height = '16px';
+        badge.style.backgroundColor = '#ef4444';
+        badge.style.borderRadius = '50%';
+        badge.style.color = 'white';
+        badge.style.fontSize = '10px';
+        badge.style.fontWeight = 'bold';
+        badge.style.display = 'flex';
+        badge.style.alignItems = 'center';
+        badge.style.justifyContent = 'center';
+        badge.style.zIndex = '20';
+        badge.style.cursor = 'help';
+        badge.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.2)';
+        badge.style.transition = 'transform 0.2s ease';
+
+        container.appendChild(badge);
+
+        // Crear el contenido del tooltip con viñetas
+        const locationsList = missingLocations.map(loc => `• ${loc}`).join('<br>');
+        const tooltipContent = `<strong>Faltan tareas en:</strong><br>${locationsList}<br><br><small style="color: #7f1d1d; font-size: 11px; opacity: 0.8;">Posiciona el cursor para ver detalles</small>`;
+
+        // Variable para mantener referencia al tooltip
+        let tooltip: HTMLElement | null = null;
+
+        // Evento mouseenter - mostrar tooltip
+        const showTooltip = (e: MouseEvent) => {
+          // Si ya existe un tooltip, no crear otro
+          if (tooltip) {
+            return;
+          }
+
+          // Crear tooltip
+          tooltip = document.createElement('div');
+          tooltip.className = 'missing-locations-tooltip';
+          tooltip.innerHTML = tooltipContent;
+          tooltip.style.position = 'fixed';
+          tooltip.style.zIndex = '999999';
+          tooltip.style.backgroundColor = '#fee2e2';
+          tooltip.style.color = '#991b1b';
+          tooltip.style.padding = '12px 16px';
+          tooltip.style.borderRadius = '8px';
+          tooltip.style.border = '1px solid #fecaca';
+          tooltip.style.boxShadow = '0 4px 12px rgba(239, 68, 68, 0.3)';
+          tooltip.style.minWidth = '180px';
+          tooltip.style.maxWidth = '300px';
+          tooltip.style.whiteSpace = 'normal';
+          tooltip.style.fontSize = '13px';
+          tooltip.style.lineHeight = '1.6';
+          tooltip.style.pointerEvents = 'auto';
+          tooltip.style.animation = 'fadeIn 0.2s ease';
+
+          document.body.appendChild(tooltip);
+
+          // Posicionar el tooltip encima del badge con margen
+          const rect = badge.getBoundingClientRect();
+          const tooltipRect = tooltip.getBoundingClientRect();
+
+          let left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
+          let top = rect.top - tooltipRect.height - 12;
+
+          // Ajustar si se sale de pantalla
+          if (left < 10) {
+            left = 10;
+          } else if (left + tooltipRect.width > window.innerWidth - 10) {
+            left = window.innerWidth - tooltipRect.width - 10;
+          }
+
+          if (top < 10) {
+            top = rect.bottom + 12;
+          }
+
+          tooltip.style.left = left + 'px';
+          tooltip.style.top = top + 'px';
+
+          // Animar entrada
+          tooltip.style.opacity = '0';
+          setTimeout(() => {
+            if (tooltip) {
+              tooltip.style.opacity = '1';
+              tooltip.style.transition = 'opacity 0.2s ease';
+            }
+          }, 10);
+        };
+
+        // Evento mouseleave - ocultar tooltip
+        const hideTooltip = () => {
+          if (tooltip && tooltip.parentNode) {
+            tooltip.style.opacity = '0';
+            setTimeout(() => {
+              if (tooltip && tooltip.parentNode) {
+                tooltip.parentNode.removeChild(tooltip);
+              }
+              tooltip = null;
+            }, 200);
+          }
+        };
+
+        // Agregar eventos al badge
+        badge.addEventListener('mouseenter', showTooltip);
+        badge.addEventListener('mouseleave', hideTooltip);
+
+        // También mantener el tooltip visible si el cursor está sobre él
+        setTimeout(() => {
+          const tooltips = document.querySelectorAll('.missing-locations-tooltip');
+          tooltips.forEach(tt => {
+            (tt as HTMLElement).addEventListener('mouseenter', () => {
+              // No hacer nada, mantener visible
+            });
+            (tt as HTMLElement).addEventListener('mouseleave', hideTooltip);
+          });
+        }, 100);
+
+        console.log(`[CalendarComponent] Badge añadido para ${dateStr} con ${count} localizaciones faltantes:`, missingLocations);
+      }
+    } catch (error) {
+      console.error('[CalendarComponent] Error en addMissingLocationIndicator:', error);
     }
   }
 }

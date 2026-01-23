@@ -14,6 +14,14 @@ export type LocationUpdate = Partial<LocationInsert>;
 
 @Injectable({ providedIn: 'root' })
 export class LocationService {
+    // Devuelve un array de objetos { locations_id, day } desde la tabla tooltip_loc_dias
+    async getTooltipLocationDays(): Promise<Array<{ locations_id: number; day: string }>> {
+      const { data, error } = await this.supabase.supabase
+        .from('tooltip_loc_dias')
+        .select('locations_id, day');
+      if (error || !data) return [];
+      return data;
+    }
   constructor(private supabase: SupabaseService) {}
 
   async getAll(): Promise<Location[]> {

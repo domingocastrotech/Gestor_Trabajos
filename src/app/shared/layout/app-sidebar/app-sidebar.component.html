@@ -60,6 +60,9 @@
 
           <ul class="flex flex-col gap-1">
             @for (nav of navItems; track $index; let i = $index) {
+              @if (nav.name === 'Administración' && !isAdmin()) {
+                <!-- No mostrar la pestaña de Administración si no es administrador -->
+              } @else {
               <li>
                 @if (nav.subItems) {
                   <button
@@ -193,6 +196,7 @@
                   }
                 }
               </li>
+              }
             }
           </ul>
         </div>

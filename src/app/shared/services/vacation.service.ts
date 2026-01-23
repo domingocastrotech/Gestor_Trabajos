@@ -1,34 +1,71 @@
 import { Injectable } from '@angular/core';
 import { SupabaseService } from './supabase.service';
+import { EmployeeService } from './employee.service';
 
 export interface VacationRequest {
   id: number;
   employee_id: number;
   start_date: string;
   end_date: string;
-  vacation_type: 'vacation' | 'day-off';
+  type: 'vacation' | 'day-off';
   status: 'pending' | 'approved' | 'rejected';
   reason: string | null;
-  reviewed_by_employee_id: number | null;
-  reviewed_at: string | null;
-  created_at?: string;
+  decided_by_employee_id: number | null;
+  decided_at: string | null;
+  request_date?: string;
 }
 
-export type VacationRequestInsert = Omit<VacationRequest, 'id' | 'created_at' | 'reviewed_by_employee_id' | 'reviewed_at'>;
-export type VacationRequestUpdate = Partial<Omit<VacationRequest, 'id' | 'created_at'>>;
+export type VacationRequestInsert = Omit<VacationRequest, 'id' | 'request_date' | 'decided_by_employee_id' | 'decided_at'>;
+export type VacationRequestUpdate = Partial<Omit<VacationRequest, 'id' | 'request_date'>>;
 
 @Injectable({ providedIn: 'root' })
 export class VacationService {
-  constructor(private supabase: SupabaseService) {}
+  constructor(private supabase: SupabaseService, private employeeService: EmployeeService) {}
 
   async getAll(): Promise<VacationRequest[]> {
-    const { data, error } = await this.supabase.supabase
-      .from('vacation_requests')
-      .select('*')
-      .order('created_at', { ascending: false });
+    try {
+      console.log('[VacationService] getAll() - Consultando vacation_requests...');
 
-    if (error) throw error;
-    return data || [];
+      // Verificar usuario autenticado
+      const { data: { user } } = await this.supabase.supabase.auth.getUser();
+      console.log('[VacationService] Usuario autenticado:', user?.email, 'ID:', user?.id);
+
+      // Obtener el rol del usuario desde la tabla employees
+      const { data: employeeData } = await this.supabase.supabase
+        .from('employees')
+        .select('id, role, email')
+        .eq('email', user?.email!)
+        .single();
+
+      console.log('[VacationService] Datos del empleado:', employeeData);
+      console.log('[VacationService] Es admin?', employeeData?.role === 'Administrador');
+
+      // Intentar obtener el conteo de registros
+      const { count, error: countError } = await this.supabase.supabase
+        .from('vacation_requests')
+        .select('*', { count: 'exact' })
+        .limit(1);
+
+      console.log('[VacationService] COUNT query - Error:', countError);
+      console.log('[VacationService] COUNT query - Total registros en BD:', count);
+
+      const { data, error } = await this.supabase.supabase
+        .from('vacation_requests')
+        .select('*')
+        .order('request_date', { ascending: false });
+
+      if (error) {
+        console.error('[VacationService] Error en getAll():', error);
+        throw error;
+      }
+
+      console.log('[VacationService] getAll() - Datos recibidos:', data);
+      console.log('[VacationService] Cantidad de registros devueltos:', data?.length);
+      return data || [];
+    } catch (error) {
+      console.error('[VacationService] Exception en getAll():', error);
+      throw error;
+    }
   }
 
   async getByEmployeeId(employeeId: number): Promise<VacationRequest[]> {
@@ -64,35 +101,37 @@ export class VacationService {
     return data;
   }
 
-  async approve(id: number, reviewedByEmployeeId: number): Promise<VacationRequest> {
+  async approve(id: number, decidedByEmployeeId: number, comment?: string): Promise<VacationRequest> {
     const { data, error } = await this.supabase.supabase
       .from('vacation_requests')
       .update({
         status: 'approved',
-        reviewed_by_employee_id: reviewedByEmployeeId,
-        reviewed_at: new Date().toISOString(),
+        decided_by_employee_id: decidedByEmployeeId,
+        decided_at: new Date().toISOString(),
       })
       .eq('id', id)
       .select()
       .single();
 
     if (error) throw error;
+    await this.notifyDecisionEmail(data, comment);
     return data;
   }
 
-  async reject(id: number, reviewedByEmployeeId: number): Promise<VacationRequest> {
+  async reject(id: number, decidedByEmployeeId: number, comment?: string): Promise<VacationRequest> {
     const { data, error } = await this.supabase.supabase
       .from('vacation_requests')
       .update({
         status: 'rejected',
-        reviewed_by_employee_id: reviewedByEmployeeId,
-        reviewed_at: new Date().toISOString(),
+        decided_by_employee_id: decidedByEmployeeId,
+        decided_at: new Date().toISOString(),
       })
       .eq('id', id)
       .select()
       .single();
 
     if (error) throw error;
+    await this.notifyDecisionEmail(data, comment);
     return data;
   }
 
@@ -103,5 +142,59 @@ export class VacationService {
       .eq('id', id);
 
     if (error) throw error;
+  }
+
+  private async notifyDecisionEmail(request: VacationRequest, emailComment?: string): Promise<void> {
+    try {
+      console.log('[VacationService] Enviando notificación de decisión para request:', request.id);
+
+      const employee = await this.employeeService.getById(request.employee_id);
+      if (!employee?.email) {
+        console.warn('[VacationService] No hay email del empleado, saltando notificación');
+        return;
+      }
+
+      const decidedBy = request.decided_by_employee_id
+        ? await this.employeeService.getById(request.decided_by_employee_id)
+        : null;
+
+      const payload = {
+        to: employee.email,
+        status: request.status,
+        type: request.type,
+        employeeName: employee.name,
+        start_date: request.start_date,
+        end_date: request.end_date,
+        comment: emailComment || request.reason || undefined,
+        decidedByName: decidedBy?.name,
+      } as any;
+
+      console.log('[VacationService] Payload de email:', payload);
+
+      // Obtener la URL base de Supabase y la anon key
+      const supabaseUrl = this.supabase.supabaseUrl;
+      const functionUrl = `${supabaseUrl}/functions/v1/Mail-send-vacations`;
+
+      // Obtener la anon key desde el cliente de Supabase
+      const anonKey = (this.supabase.supabase as any)._getSession?.()?.access_token ||
+                      (this.supabase.supabase as any).getSession?.()?.data?.session?.access_token;
+
+      // Si no hay access token, usa la anon key del environment (pública)
+      const authToken = anonKey || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZtYmh5bGV6cnFvYWN6cXFpcXdkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU5MzUwMDAsImV4cCI6MjA1MTUxMTAwMH0.xVvEJEsWwGDhcYzF6tMDvN5TqJpEHExJXlBrYp_9wz8';
+
+      const response = await fetch(functionUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+      console.log('[VacationService] Respuesta de función:', { status: response.status, data });
+    } catch (e) {
+      console.error('[VacationService] Error enviando email de decisión:', e);
+    }
   }
 }

@@ -1,7 +1,7 @@
 import { Inject, Injectable, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { createClient, SupabaseClient, Session } from '@supabase/supabase-js';
-import { environment } from '../../../environments/environment';
+import { environment } from '../../../environments/environment.development';
 
 @Injectable({ providedIn: 'root' })
 export class SupabaseService {
@@ -26,6 +26,10 @@ export class SupabaseService {
 
   get supabase(): SupabaseClient {
     return this.client;
+  }
+
+  get supabaseUrl(): string {
+    return environment.supabaseUrl;
   }
 
   async signOut() {
