@@ -48,7 +48,7 @@ export class NotificationService {
 
       if (error) throw error;
 
-      const notifications: Notification[] = (data || []).map(n => ({
+      const notifications: Notification[] = (data || []).map((n: any) => ({
         id: n.id,
         type: n.type,
         title: n.title,
@@ -145,7 +145,7 @@ export class NotificationService {
 
       if (error) throw error;
 
-      const notifications = this.notificationsSubject.value.map(n =>
+      const notifications = this.notificationsSubject.value.map((n: Notification) =>
         n.id === notificationId ? { ...n, read: true } : n
       );
       this.notificationsSubject.next(notifications);
@@ -168,7 +168,7 @@ export class NotificationService {
 
       if (error) throw error;
 
-      const notifications = this.notificationsSubject.value.map(n => ({ ...n, read: true }));
+      const notifications = this.notificationsSubject.value.map((n: Notification) => ({ ...n, read: true }));
       this.notificationsSubject.next(notifications);
     } catch (error) {
       console.error('Error marking all notifications as read:', error);
@@ -185,7 +185,7 @@ export class NotificationService {
 
       if (error) throw error;
 
-      const notifications = this.notificationsSubject.value.filter(n => n.id !== notificationId);
+      const notifications = this.notificationsSubject.value.filter((n: Notification) => n.id !== notificationId);
       this.notificationsSubject.next(notifications);
     } catch (error) {
       console.error('Error clearing notification:', error);

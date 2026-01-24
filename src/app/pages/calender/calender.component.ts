@@ -2580,6 +2580,7 @@ export class CalenderComponent {
 
         // Evento mouseenter - mostrar tooltip
         const showTooltip = (e: MouseEvent | TouchEvent) => {
+          console.log(`[showTooltip ${dateStr}] ⭐ EJECUTANDO showTooltip, tipo de evento:`, e.type);
           e.stopPropagation(); // Prevenir que el click abra el modal
           e.stopImmediatePropagation(); // Detener todos los handlers
           if ('preventDefault' in e && typeof e.preventDefault === 'function') {
@@ -2594,9 +2595,11 @@ export class CalenderComponent {
 
           // Si ya existe un tooltip visible, no crear otro
           if (tooltip && isTooltipVisible) {
+            console.log(`[showTooltip ${dateStr}] Tooltip ya visible, no crear otro`);
             return;
           }
 
+          console.log(`[showTooltip ${dateStr}] Creando elemento tooltip...`);
           isTooltipVisible = true;
 
           // Crear tooltip
@@ -2624,12 +2627,12 @@ export class CalenderComponent {
 
           document.body.appendChild(tooltip);
 
-          // Posicionar el tooltip encima del badge con margen
+          // Posicionar el tooltip encima del badge con margen suficiente para evitar overlap
           const rect = badge.getBoundingClientRect();
           const tooltipRect = tooltip.getBoundingClientRect();
 
           let left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
-          let top = rect.top - tooltipRect.height - 12;
+          let top = rect.top - tooltipRect.height - 20; // Mayor margen para evitar overlap
 
           // Ajustar si se sale de pantalla
           if (left < 10) {
@@ -2639,7 +2642,7 @@ export class CalenderComponent {
           }
 
           if (top < 10) {
-            top = rect.bottom + 12;
+            top = rect.bottom + 20; // Mayor margen si está debajo
           }
 
           tooltip.style.left = left + 'px';
@@ -2683,13 +2686,14 @@ export class CalenderComponent {
             tooltip.addEventListener('dragstart', handleDragStart);
           }
 
-          // Auto-cerrar después de 10 segundos
+          // Auto-cerrar después de un tiempo (5s en móvil, 10s en desktop)
           if (autoCloseTimer) {
             clearTimeout(autoCloseTimer);
           }
+          const autoCloseDelay = isTouchDevice ? 5000 : 10000;
           autoCloseTimer = setTimeout(() => {
             hideTooltip();
-          }, 10000);
+          }, autoCloseDelay);
 
           // Agregar listener para cerrar al hacer click/touch fuera (solo si no existe uno activo)
           if (!outsideClickListener) {
@@ -2754,9 +2758,29 @@ export class CalenderComponent {
         // Detectar si es dispositivo táctil
         const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
-        // Agregar eventos al badge
+        console.log(`[Badge Setup ${dateStr}] isTouchDevice=${isTouchDevice}, ontouchstart=${'ontouchstart' in window}, maxTouchPoints=${navigator.maxTouchPoints}`);
+
+        // IMPORTANTE: Configurar AMBOS tipos de eventos para dispositivos híbridos (laptop con pantalla táctil)
+        // Eventos MOUSE para hover en desktop
+        console.log(`[Badge Setup ${dateStr}] Configurando eventos MOUSE (mouseenter/mouseleave)`);
+        badge.addEventListener('mouseenter', (e) => {
+          console.log(`[Badge ${dateStr}] ✓ mouseenter disparado!`);
+          showTooltip(e);
+        });
+        badge.addEventListener('mouseleave', (e) => {
+          console.log(`[Badge ${dateStr}] ✓ mouseleave disparado!`);
+          // Usar un delay para permitir que el mouse entre al tooltip
+          hideTooltipTimeout = setTimeout(() => {
+            // Solo ocultar si no estamos sobre el tooltip
+            if (tooltip && !tooltip.matches(':hover')) {
+              hideTooltip();
+            }
+          }, 300);
+        });
+
+        // Eventos TOUCH para dispositivos móviles/táctiles
         if (isTouchDevice) {
-          // En móvil, manejar todo en touchend
+          console.log(`[Badge Setup ${dateStr}] Configurando eventos TOUCH adicionales`);
           badge.addEventListener('touchstart', (e) => {
             console.log('[CalendarComponent] touchstart en badge');
             e.stopPropagation();
@@ -2776,15 +2800,6 @@ export class CalenderComponent {
               showTooltip(e as any);
             }
           }, true);
-        } else {
-          // En desktop, usar hover
-          badge.addEventListener('mouseenter', showTooltip);
-          badge.addEventListener('mouseleave', () => {
-            // Usar un pequeño delay para permitir que el mouse entre al tooltip
-            hideTooltipTimeout = setTimeout(() => {
-              hideTooltip();
-            }, 100);
-          });
         }
 
         console.log(`[CalendarComponent] Badge añadido para ${dateStr} con ${count} localizaciones faltantes:`, missingLocations);
