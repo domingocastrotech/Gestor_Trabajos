@@ -159,14 +159,14 @@ export class VacationService {
         : null;
 
       const payload = {
-        to: employee.email,
+        to: employee.email?.trim() || '',
         status: request.status,
         type: request.type,
-        employeeName: employee.name,
-        start_date: request.start_date,
-        end_date: request.end_date,
-        comment: emailComment || request.reason || undefined,
-        decidedByName: decidedBy?.name,
+        employeeName: employee.name?.trim() || '',
+        start_date: request.start_date?.trim() || '',
+        end_date: request.end_date?.trim() || undefined,
+        comment: (emailComment || request.reason || '')?.trim() || undefined,
+        decidedByName: decidedBy?.name?.trim() || undefined,
       } as any;
 
       console.log('[VacationService] Payload de email:', payload);

@@ -357,6 +357,11 @@ export class CalenderComponent {
     taskTitle: ''
   };
 
+  // Modal de confirmación de envío de solicitud de vacaciones
+  vacationSendConfirmation = {
+    isOpen: false,
+  };
+
   // Sistema de vacaciones
   vacationRequests: VacationRequest[] = [];
   isVacationModalOpen = false;
@@ -404,23 +409,26 @@ export class CalenderComponent {
     private changeDetectorRef: ChangeDetectorRef
   ) {
     // Inicializar calendarOptions inmediatamente para evitar el error "viewType '' is not available"
+    // Detectar si es móvil
+    const isMobile = window.innerWidth < 768;
+
     this.calendarOptions = {
-      plugins: [dayGridPlugin, interactionPlugin],
+      plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
       initialView: 'dayGridMonth',
       locale: esLocale,
       headerToolbar: {
-        left: 'prev,next today',
+        left: isMobile ? 'prev,next' : 'prev,next today',
         center: 'title',
-        right: 'dayGridMonth'
+        right: isMobile ? '' : 'dayGridMonth'
       },
       editable: true,
       selectable: true,
       events: [],
       select: (info) => this.handleDateSelect(info),
       eventClick: (info) => this.handleEventClick(info),
-      dateClick: (info) => this.handleDayClick(info.dateStr, info.allDay),
-      dayMaxEventRows: 3,
-      moreLinkContent: () => ({ html: '<span class="fc-more-text">+ Más tareas</span>' }),
+      dateClick: (info) => this.handleDayClick(info.dateStr, info.allDay, info.jsEvent),
+      dayMaxEventRows: isMobile ? 2 : 3,
+      moreLinkContent: () => ({ html: '<span class="fc-more-text text-xs">+ Más</span>' }),
       moreLinkClick: (args) => {
         this.openDayEventsModal(args.date.toISOString().split('T')[0]);
         return 'none';
@@ -430,7 +438,9 @@ export class CalenderComponent {
       datesSet: () => {
         // Cuando cambias de vista o mes, se vuelven a renderizar las celdas
         console.log('[CalendarComponent] Vista del calendario cambió, badges deberían actualizarse');
-      }
+      },
+      contentHeight: 'auto',
+      height: isMobile ? 'auto' : undefined
     };
   }
 
@@ -567,7 +577,7 @@ export class CalenderComponent {
         type: req.type,
         reason: req.reason || '',
         status: req.status,
-        requestDate: req.request_date || ''
+        requestDate: this.formatRequestDate(req.request_date || '')
       }));
 
       console.log('[CalendarComponent] vacationRequests después de mapear:', this.vacationRequests);
@@ -615,7 +625,7 @@ export class CalenderComponent {
     const newCalendarOptions: CalendarOptions = {
       ...this.calendarOptions,
       events: this.events,
-      dateClick: (info) => this.handleDayClick(info.dateStr, info.allDay),
+      dateClick: (info) => this.handleDayClick(info.dateStr, info.allDay, info.jsEvent),
       select: (info) => this.handleDateSelect(info),
       eventClick: (info) => this.handleEventClick(info),
       dayMaxEventRows: 3,
@@ -646,7 +656,17 @@ export class CalenderComponent {
     this.openDayEventsModal(selectInfo.startStr);
   }
 
-  handleDayClick(dateStr: string, allDay: boolean) {
+  handleDayClick(dateStr: string, allDay: boolean, event?: MouseEvent) {
+    // Verificar si el click fue en el badge de ubicación faltante
+    if (event) {
+      const target = event.target as HTMLElement;
+      // Verificar si el target es el badge o está dentro del badge
+      if (target.closest('.missing-location-badge')) {
+        // No abrir el modal si se clickeó el badge
+        return;
+      }
+    }
+
     // Siempre mostrar el modal de lista de tareas del día
     this.openDayEventsModal(dateStr);
   }
@@ -1237,17 +1257,37 @@ export class CalenderComponent {
 
     // Agregar cada evento del calendario actual
     this.events.forEach(event => {
-      const startDate = new Date(event.start as string);
-      const endDate = event.end ? new Date(event.end as string) : new Date(startDate.getTime() + 3600000); // 1 hora por defecto
+      let startDate = new Date(event.start as string);
+      let endDate = event.end ? new Date(event.end as string) : new Date(startDate);
 
-      // Formatear fechas en formato iCalendar (YYYYMMDDTHHMMSS)
+      // Si el evento tiene horas específicas, combinarlas con la fecha
+      if (event.extendedProps.startTime) {
+        const [hours, minutes] = event.extendedProps.startTime.split(':');
+        startDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+      }
+
+      if (event.extendedProps.endTime) {
+        const [hours, minutes] = event.extendedProps.endTime.split(':');
+        endDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+      } else {
+        // Si no hay hora de fin, usar 1 hora después del inicio
+        endDate = new Date(startDate.getTime() + 3600000);
+      }
+
+      // Formatear fechas en formato iCalendar (YYYYMMDDTHHMMSS) en zona horaria local
       const formatDate = (date: Date) => {
-        return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        const seconds = String(date.getSeconds()).padStart(2, '0');
+        return `${year}${month}${day}T${hours}${minutes}${seconds}`;
       };
 
       icsContent.push('BEGIN:VEVENT');
-      icsContent.push(`DTSTART:${formatDate(startDate)}`);
-      icsContent.push(`DTEND:${formatDate(endDate)}`);
+      icsContent.push(`DTSTART;TZID=Europe/Madrid:${formatDate(startDate)}`);
+      icsContent.push(`DTEND;TZID=Europe/Madrid:${formatDate(endDate)}`);
       icsContent.push(`SUMMARY:${event.title || 'Tarea'}`);
 
       if (event.extendedProps.location) {
@@ -1255,7 +1295,10 @@ export class CalenderComponent {
       }
 
       if (event.extendedProps.employeeName) {
-        const description = `Empleado: ${event.extendedProps.employeeName}\\nLocalización: ${event.extendedProps.location || 'N/A'}`;
+        const timeInfo = event.extendedProps.startTime && event.extendedProps.endTime
+          ? `\\nHorario: ${event.extendedProps.startTime} - ${event.extendedProps.endTime}`
+          : '';
+        const description = `Empleado: ${event.extendedProps.employeeName}\\nLocalización: ${event.extendedProps.location || 'N/A'}${timeInfo}`;
         icsContent.push(`DESCRIPTION:${description}`);
       }
 
@@ -1403,6 +1446,55 @@ export class CalenderComponent {
         this.isVacationSubmitting = false;
       }
     }
+
+  /**
+   * Abre el popup de confirmación antes de enviar la solicitud
+   * Muestra aviso de posible entrega en spam y disponibilidad en notificaciones.
+   */
+  openVacationSendConfirmation() {
+    if (this.isVacationSubmitting) return;
+
+    // Validaciones iguales a las del envío para evitar abrir el popup si falta algo
+    if (!this.vacationStartDate || !this.vacationEndDate || !this.vacationReason.trim()) {
+      let msg = 'Debes completar todos los campos para solicitar vacaciones.';
+      if (!this.vacationStartDate) msg = 'Debes seleccionar la fecha de inicio.';
+      else if (!this.vacationEndDate) msg = 'Debes seleccionar la fecha de fin.';
+      else if (!this.vacationReason.trim()) msg = 'Debes indicar el motivo de la solicitud.';
+      this.showAlert('warning', 'Campos incompletos', msg);
+      return;
+    }
+
+    const start = new Date(this.vacationStartDate);
+    const end = new Date(this.vacationEndDate);
+    if (start > end) {
+      this.showAlert('error', 'Fechas incorrectas', 'La fecha de inicio no puede ser posterior a la fecha de fin.');
+      return;
+    }
+
+    const overlapping = this.vacationRequests.some(r =>
+      r.employeeId === this.currentUser?.id &&
+      r.status === 'approved' &&
+      ((new Date(r.startDate) <= end && new Date(r.endDate) >= start))
+    );
+    if (overlapping) {
+      this.showAlert('error', 'Ya tienes vacaciones', 'Ya tienes vacaciones aprobadas en los días seleccionados.');
+      return;
+    }
+
+    if (!this.currentUser) return;
+
+    this.vacationSendConfirmation.isOpen = true;
+  }
+
+  closeVacationSendConfirmation() {
+    this.vacationSendConfirmation.isOpen = false;
+  }
+
+  async confirmVacationSend() {
+    // Cerrar popup y ejecutar el envío real
+    this.vacationSendConfirmation.isOpen = false;
+    await this.submitVacationRequest();
+  }
 
 
   clearVacationAlerts() {
@@ -1605,6 +1697,22 @@ export class CalenderComponent {
     const date = new Date(dateStr);
     const options: Intl.DateTimeFormatOptions = { day: '2-digit', month: 'long', year: 'numeric' };
     return date.toLocaleDateString('es-ES', options);
+  }
+
+  private formatRequestDate(dateStr: string): string {
+    if (!dateStr) return '';
+    try {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('es-ES', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return dateStr;
+    }
   }
 
   isEmployeeAvailable(employeeId: number): boolean {
@@ -1939,13 +2047,22 @@ export class CalenderComponent {
 
         // Variable para mantener referencia al tooltip
         let tooltip: HTMLElement | null = null;
+        let isTooltipVisible = false;
 
         // Evento mouseenter - mostrar tooltip
-        const showTooltip = (e: MouseEvent) => {
+        const showTooltip = (e: MouseEvent | TouchEvent) => {
+          e.stopPropagation(); // Prevenir que el click abra el modal
+          e.stopImmediatePropagation(); // Detener todos los handlers
+          if ('preventDefault' in e && typeof e.preventDefault === 'function') {
+            e.preventDefault();
+          }
+
           // Si ya existe un tooltip, no crear otro
           if (tooltip) {
             return;
           }
+
+          isTooltipVisible = true;
 
           // Crear tooltip
           tooltip = document.createElement('div');
@@ -2002,6 +2119,7 @@ export class CalenderComponent {
 
         // Evento mouseleave - ocultar tooltip
         const hideTooltip = () => {
+          isTooltipVisible = false;
           if (tooltip && tooltip.parentNode) {
             tooltip.style.opacity = '0';
             setTimeout(() => {
@@ -2013,9 +2131,56 @@ export class CalenderComponent {
           }
         };
 
+        // Función toggle para móvil
+        const toggleTooltip = (e: Event) => {
+          e.stopPropagation(); // Prevenir que el click abra el modal
+          e.stopImmediatePropagation(); // Detener todos los handlers
+          e.preventDefault();
+
+          if (isTooltipVisible) {
+            hideTooltip();
+          } else {
+            showTooltip(e as MouseEvent);
+          }
+        };
+
+        // Detectar si es dispositivo táctil
+        const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
         // Agregar eventos al badge
-        badge.addEventListener('mouseenter', showTooltip);
-        badge.addEventListener('mouseleave', hideTooltip);
+        if (isTouchDevice) {
+          // En móvil, usar click/touch con capture para interceptar antes
+          badge.addEventListener('click', toggleTooltip, true);
+          badge.addEventListener('touchstart', (e) => {
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+          }, true);
+          badge.addEventListener('touchend', (e) => {
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+          }, true);
+        } else {
+          // En desktop, usar hover
+          badge.addEventListener('mouseenter', showTooltip);
+          badge.addEventListener('mouseleave', hideTooltip);
+        }
+
+        // Cerrar tooltip al hacer click fuera
+        if (isTouchDevice) {
+          const closeOnClickOutside = (e: Event) => {
+            const target = e.target as HTMLElement;
+            if (tooltip && !tooltip.contains(target) && !badge.contains(target)) {
+              hideTooltip();
+              document.removeEventListener('click', closeOnClickOutside);
+            }
+          };
+
+          setTimeout(() => {
+            if (isTooltipVisible) {
+              document.addEventListener('click', closeOnClickOutside);
+            }
+          }, 100);
+        }
 
         // También mantener el tooltip visible si el cursor está sobre él
         setTimeout(() => {

@@ -402,6 +402,67 @@ Gestor_Trabajo/
 ├── 📂 public/                    # Assets estáticos
 │   └── images/                   # Imágenes (brand, icons, logos, etc.)
 │
+
+### ✉️ Mejora de entregabilidad (anti‑spam)
+
+Para minimizar que los correos vayan a spam, la función de correo incluye buenas prácticas:
+
+- From y Reply‑To con nombre amigable
+- Encabezado List-Unsubscribe
+- Desactivar el click‑tracking (evita enlaces reescritos)
+- Categorías de SendGrid para trazabilidad
+- Preheader oculto en HTML y versión text/plain
+
+Configura estos secretos en Supabase:
+
+```bash
+supabase secrets set \
+  SENDGRID_API_KEY=SG.xxxxx \
+  FROM_EMAIL=no-reply@tu-dominio.com \
+  FROM_NAME="Gestor de Trabajo" \
+  REPLY_TO_EMAIL=soporte@tu-dominio.com \
+  REPLY_TO_NAME="Soporte Gestor de Trabajo" \
+  APP_URL=https://tu-dominio.com \
+  COMPANY_ADDRESS="Tu Empresa · Dirección · Ciudad · País" \
+  LIST_UNSUBSCRIBE_EMAIL=unsubscribe@tu-dominio.com
+```
+
+Y asegúrate de autenticar el dominio en tu proveedor de correo (SendGrid):
+
+- SPF: `v=spf1 include:sendgrid.net ~all`
+- DKIM: Registros CNAME provistos por SendGrid
+- DMARC: `v=DMARC1; p=none; rua=mailto:dmarc@tu-dominio.com`
+
+Recomendaciones:
+
+- Usa FROM_EMAIL de un dominio verificado y alineado con DMARC
+- Evita asuntos y cuerpos con exceso de emojis o palabras gatillo de spam
+- Incluye versión text/plain (ya incluida) y dirección física de la empresa
+- No uses noreply@ si esperas respuestas; define REPLY_TO_EMAIL
+
+#### Sin dominio propio
+
+Si no dispones de dominio ni acceso a DNS:
+
+- Verifica un Single Sender en SendGrid (tu correo habitual: Gmail/Outlook)
+- Usa ese correo como FROM_EMAIL y un REPLY_TO_EMAIL coherente
+- Evita noreply@ genéricos; los proveedores los marcan más como spam
+- Mantén asuntos claros y sin exceso de emojis; incluye text/plain y un preheader
+- Reduce enlaces y no uses acortadores; desactiva click_tracking (ya desactivado en la función)
+
+Ejemplo de secretos sin dominio:
+
+```bash
+supabase secrets set \
+  SENDGRID_API_KEY=SG.xxxxx \
+  FROM_EMAIL=tu-correo@gmail.com \
+  FROM_NAME="Gestor de Trabajo" \
+  REPLY_TO_EMAIL=tu-correo@gmail.com \
+  REPLY_TO_NAME="Soporte Gestor de Trabajo"
+```
+
+Limita el volumen y complementa con las notificaciones dentro de la web para garantizar recepción.
+
 ├── 📂 supabase/                  # Backend serverless
 │   └── functions/
 │       └── Mail-send-vacations/  # Edge Function para envío de emails

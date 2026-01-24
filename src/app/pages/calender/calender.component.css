@@ -101,3 +101,140 @@
 .stop-tooltip-custom {
 	z-index: 999999 !important;
 }
+
+/* ===== ESTILOS RESPONSIVOS PARA MÓVIL ===== */
+
+/* Reducir tamaños de fuente en móvil */
+@media (max-width: 640px) {
+	.fc {
+		font-size: 0.73rem;
+	}
+
+	.fc .fc-button-primary {
+		font-size: 0.62rem;
+		padding: 0.35rem 0.55rem;
+		height: auto;
+		line-height: 1.2;
+	}
+
+	.fc .fc-button-primary:not(:disabled).fc-button-active {
+		font-size: 0.62rem;
+	}
+
+	.fc .fc-toolbar.fc-header-toolbar {
+		margin-bottom: 0.3rem;
+		flex-direction: row;
+		gap: 0.3rem;
+		flex-wrap: wrap;
+	}
+
+	.fc .fc-toolbar-chunk {
+		margin: 0;
+		flex-grow: 1;
+		min-width: 0;
+	}
+
+	.fc .fc-button-group {
+		flex-wrap: wrap;
+		gap: 0.2rem;
+	}
+
+	.fc .fc-daygrid-day-number {
+		padding: 1px 2px;
+		font-size: 0.68rem;
+	}
+
+	.fc .fc-daygrid-day-frame {
+		min-height: 50px;
+	}
+
+	.fc .fc-daygrid-day-events {
+		margin-top: 1px;
+	}
+
+	.fc .fc-event {
+		font-size: 0.62rem;
+		padding: 0.5px 1px;
+		margin-bottom: 1px;
+	}
+
+	.fc .fc-event-title {
+		font-size: 0.62rem;
+		padding: 0px 1px;
+		white-space: normal;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		display: -webkit-box;
+		-webkit-line-clamp: 1;
+		-webkit-box-orient: vertical;
+	}
+
+	.fc .fc-col-header-cell {
+		padding: 2px 1px;
+		font-size: 0.68rem;
+		font-weight: 500;
+	}
+
+	.fc .fc-daygrid-day {
+		border-width: 0.5px;
+	}
+
+	.fc-more {
+		font-size: 0.62rem;
+		padding: 0px 2px;
+	}
+
+	.fc-more-text {
+		font-size: 0.62rem;
+	}
+
+	.fc .fc-daygrid-day-bg {
+		min-height: 45px;
+	}
+
+	.fc .fc-scrollgrid-sync-inner {
+		overflow: visible;
+	}
+
+	.missing-location-badge {
+		width: 12px;
+		height: 12px;
+		font-size: 8px;
+		top: 2px;
+		right: 2px;
+	}
+
+	.missing-locations-tooltip {
+		min-width: 140px;
+		max-width: 240px;
+		font-size: 11px;
+		padding: 6px 10px;
+	}
+}
+
+/* Mejorar para tablet */
+@media (min-width: 641px) and (max-width: 1024px) {
+	.fc {
+		font-size: 0.85rem;
+	}
+
+	.fc .fc-button-primary {
+		font-size: 0.8rem;
+		padding: 0.45rem 0.8rem;
+	}
+
+	.fc .fc-daygrid-day-frame {
+		min-height: 80px;
+	}
+}
+
+/* Desktop */
+@media (min-width: 1025px) {
+	.fc {
+		font-size: 0.95rem;
+	}
+
+	.fc .fc-daygrid-day-frame {
+		min-height: 120px;
+	}
+}

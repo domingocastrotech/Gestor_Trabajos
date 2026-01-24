@@ -1,12 +1,12 @@
-<div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
-  <div class="flex flex-col gap-4 p-4">
-    <div class="flex flex-wrap items-center justify-between gap-3">
+<div class="rounded-lg md:rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+  <div class="flex flex-col gap-2 md:gap-4 p-2 md:p-4">
+    <div class="flex flex-col md:flex-row md:flex-wrap items-start md:items-center justify-between gap-3">
       @if (isAdmin) {
-        <div class="flex flex-wrap items-center gap-3">
-          <label class="text-sm font-medium text-gray-700 dark:text-gray-200" for="employee-filter">Empleado:</label>
+        <div class="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-2 md:gap-3 w-full md:w-auto">
+          <label class="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-200" for="employee-filter">Empleado:</label>
           <select
             id="employee-filter"
-            class="h-10 min-w-[200px] rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+            class="h-9 md:h-10 w-full sm:w-auto min-w-[150px] md:min-w-[200px] rounded-lg border border-gray-300 bg-white px-2 md:px-3 py-1 md:py-2 text-xs md:text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
             (change)="handleEmployeeFilterChange($any($event.target).value || 'all')"
             [ngModel]="selectedEmployeeFilter"
           >
@@ -17,38 +17,40 @@
           </select>
         </div>
       } @else {
-        <div class="flex flex-wrap items-center gap-3">
-          <span class="text-sm font-medium text-gray-700 dark:text-gray-200">Empleado: {{ currentUser?.name }}</span>
+        <div class="flex flex-wrap items-center gap-2 md:gap-3 w-full md:w-auto">
+          <span class="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-200">Empleado: {{ currentUser?.name }}</span>
         </div>
       }
-      <div class="flex flex-wrap items-center gap-2">
+      <div class="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 w-full md:w-auto">
         <button
           type="button"
           (click)="openVacationModal()"
-          class="flex items-center gap-2 h-10 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:hover:bg-gray-800"
+          class="flex items-center justify-center sm:justify-start gap-2 h-9 md:h-10 rounded-lg border border-gray-300 bg-white px-3 md:px-4 py-1 md:py-2 text-xs md:text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:hover:bg-gray-800"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
             <line x1="16" y1="2" x2="16" y2="6"></line>
             <line x1="8" y1="2" x2="8" y2="6"></line>
             <line x1="3" y1="10" x2="21" y2="10"></line>
           </svg>
-          Solicitar Vacaciones
+          <span class="hidden sm:inline">Solicitar Vacaciones</span>
+          <span class="sm:hidden">Vacaciones</span>
         </button>
         @if (isAdmin) {
           <button
             type="button"
             (click)="openVacationManagement()"
-            class="flex items-center gap-2 h-10 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:hover:bg-gray-800"
+            class="flex items-center justify-center sm:justify-start gap-2 h-9 md:h-10 rounded-lg border border-gray-300 bg-white px-3 md:px-4 py-1 md:py-2 text-xs md:text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:hover:bg-gray-800 relative"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
               <circle cx="8.5" cy="7" r="4"></circle>
               <polyline points="17 11 19 13 23 9"></polyline>
             </svg>
-            Gestionar Solicitudes
+            <span class="hidden sm:inline">Gestionar Solicitudes</span>
+            <span class="sm:hidden">Gestionar</span>
             @if (getPendingRequestsCount() > 0) {
-              <span class="flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-red-500 rounded-full">
+              <span class="absolute -top-2 -right-2 flex items-center justify-center w-4 h-4 text-xs font-bold text-white bg-red-500 rounded-full">
                 {{ getPendingRequestsCount() }}
               </span>
             }
@@ -57,15 +59,16 @@
         <button
           type="button"
           (click)="exportToGoogleCalendar()"
-          class="flex items-center gap-2 h-10 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:hover:bg-gray-800"
+          class="flex items-center justify-center sm:justify-start gap-2 h-9 md:h-10 rounded-lg border border-gray-300 bg-white px-3 md:px-4 py-1 md:py-2 text-xs md:text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:hover:bg-gray-800"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
             <line x1="16" y1="2" x2="16" y2="6"></line>
             <line x1="8" y1="2" x2="8" y2="6"></line>
             <line x1="3" y1="10" x2="21" y2="10"></line>
           </svg>
-          Exportar Calendar
+          <span class="hidden sm:inline">Exportar Calendar</span>
+          <span class="sm:hidden">Exportar</span>
         </button>
       </div>
     </div>
@@ -598,7 +601,7 @@
         <button
           type="button"
           class="rounded-lg bg-brand-500 px-6 py-2.5 text-sm font-medium text-white hover:bg-brand-600"
-          (click)="submitVacationRequest()"
+          (click)="openVacationSendConfirmation()"
           [disabled]="isVacationSubmitting"
         >
           <span *ngIf="isVacationSubmitting" class="animate-spin mr-2">⏳</span>
@@ -607,6 +610,26 @@
       </div>
     </div>
   </app-modal>
+
+  <!-- Popup de confirmación de envío de solicitud de vacaciones -->
+  @if (vacationSendConfirmation.isOpen) {
+    <div class="fixed inset-0 z-[100000] flex items-center justify-center bg-black/40 px-4" (click)="closeVacationSendConfirmation()">
+      <div class="w-full max-w-md rounded-lg bg-white shadow-theme-lg dark:bg-gray-900" (click)="$event.stopPropagation()">
+        <div class="px-5 pt-5">
+          <h4 class="text-lg font-semibold text-gray-900 dark:text-white">Confirmar envío</h4>
+          <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+            Aviso: La confirmación o rechazo de tu solicitud puede llegar por correo en la carpeta de <strong>spam</strong>.
+            También la verás en las <strong>notificaciones</strong> de la web.
+          </p>
+          <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">¿Deseas continuar y enviar la solicitud?</p>
+        </div>
+        <div class="px-5 pb-5 mt-4 flex items-center gap-3 justify-end border-t border-gray-200 dark:border-gray-700 pt-4">
+          <button type="button" class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300" (click)="closeVacationSendConfirmation()">Cancelar</button>
+          <button type="button" class="rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600" (click)="confirmVacationSend()">Aceptar y enviar</button>
+        </div>
+      </div>
+    </div>
+  }
 
   <!-- Modal de Gestión de Solicitudes (Solo Administrador) -->
   <app-modal
@@ -631,9 +654,9 @@
         </div>
       } @else {
         <!-- Pestañas -->
-        <div class="flex items-center gap-2 border-b border-gray-200 dark:border-gray-700 mb-4">
+        <div class="grid grid-cols-2 sm:flex sm:items-center gap-2 border-b border-gray-200 dark:border-gray-700 mb-4">
           <button type="button" (click)="setVacationTab('pending')"
-            class="px-3 py-2 text-sm rounded-t-md hover:bg-gray-50 dark:hover:bg-gray-700"
+            class="px-2 sm:px-3 py-2 text-xs sm:text-sm rounded-t-md hover:bg-gray-50 dark:hover:bg-gray-700 text-center"
             [class.bg-gray-100]="vacationTab === 'pending'"
             [class.dark:bg-gray-800]="vacationTab === 'pending'"
             [class.font-semibold]="vacationTab === 'pending'"
@@ -644,7 +667,7 @@
             Pendientes ({{ pendingRequests.length }})
           </button>
           <button type="button" (click)="setVacationTab('approved')"
-            class="px-3 py-2 text-sm rounded-t-md hover:bg-gray-50 dark:hover:bg-gray-700"
+            class="px-2 sm:px-3 py-2 text-xs sm:text-sm rounded-t-md hover:bg-gray-50 dark:hover:bg-gray-700 text-center"
             [class.bg-gray-100]="vacationTab === 'approved'"
             [class.dark:bg-gray-800]="vacationTab === 'approved'"
             [class.font-semibold]="vacationTab === 'approved'"
@@ -655,7 +678,7 @@
             Aprobadas ({{ approvedRequests.length }})
           </button>
           <button type="button" (click)="setVacationTab('rejected')"
-            class="px-3 py-2 text-sm rounded-t-md hover:bg-gray-50 dark:hover:bg-gray-700"
+            class="px-2 sm:px-3 py-2 text-xs sm:text-sm rounded-t-md hover:bg-gray-50 dark:hover:bg-gray-700 text-center"
             [class.bg-gray-100]="vacationTab === 'rejected'"
             [class.dark:bg-gray-800]="vacationTab === 'rejected'"
             [class.font-semibold]="vacationTab === 'rejected'"
@@ -666,7 +689,7 @@
             Denegadas ({{ rejectedRequests.length }})
           </button>
           <button type="button" (click)="setVacationTab('completed')"
-            class="px-3 py-2 text-sm rounded-t-md hover:bg-gray-50 dark:hover:bg-gray-700"
+            class="px-2 sm:px-3 py-2 text-xs sm:text-sm rounded-t-md hover:bg-gray-50 dark:hover:bg-gray-700 text-center"
             [class.bg-gray-100]="vacationTab === 'completed'"
             [class.dark:bg-gray-800]="vacationTab === 'completed'"
             [class.font-semibold]="vacationTab === 'completed'"
@@ -682,26 +705,26 @@
         <div class="space-y-4">
           @if (vacationTab === 'pending') {
             @for (request of pendingRequests; track request.id) {
-              <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition">
-                <div class="flex items-start justify-between gap-4">
+              <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-3 sm:p-4 hover:shadow-md transition">
+                <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
                   <div class="flex items-start gap-3 flex-1">
-                    <div class="w-12 h-12 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-xl font-bold text-gray-600 dark:text-gray-300">{{ request.employeeName[0] }}</div>
-                    <div class="flex-1">
-                      <h6 class="font-semibold text-gray-900 dark:text-white">{{ request.employeeName }}</h6>
-                      <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-lg sm:text-xl font-bold text-gray-600 dark:text-gray-300 shrink-0">{{ request.employeeName[0] }}</div>
+                    <div class="flex-1 min-w-0">
+                      <h6 class="font-semibold text-gray-900 dark:text-white text-sm sm:text-base">{{ request.employeeName }}</h6>
+                      <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1">
                         <span class="font-medium">{{ request.type === 'vacation' ? '🏖️ Vacaciones' : '📅 Día Libre' }}</span>
                       </p>
-                      <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">📅 {{ request.startDate }} - {{ request.endDate }}</p>
-                      <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">💬 {{ request.reason }}</p>
+                      <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1 break-words">📅 {{ request.startDate }} - {{ request.endDate }}</p>
+                      <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1 break-words">💬 {{ request.reason }}</p>
                       <p class="text-xs text-gray-500 dark:text-gray-500 mt-2">Solicitado el: {{ request.requestDate }}</p>
                     </div>
                   </div>
-                  <div class="flex flex-col items-end gap-2">
-                    <span class="px-3 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">Pendiente</span>
-                    <div class="flex gap-2 mt-2">
-                      <button type="button" (click)="approveVacationRequest(request.id)" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-green-500 hover:bg-green-600 text-white transition" title="Aprobar">✓</button>
-                      <button type="button" (click)="rejectVacationRequest(request.id)" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-red-500 hover:bg-red-600 text-white transition" title="Rechazar">✕</button>
-                      <button type="button" (click)="deleteVacationRequest(request.id)" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-500 hover:bg-gray-600 text-white transition" title="Eliminar">🗑️</button>
+                  <div class="flex flex-col sm:items-end gap-2">
+                    <span class="px-3 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 self-start sm:self-auto">Pendiente</span>
+                    <div class="flex gap-1.5 sm:gap-2 mt-2">
+                      <button type="button" (click)="approveVacationRequest(request.id)" class="px-2.5 sm:px-3 py-1.5 text-xs font-medium rounded-lg bg-green-500 hover:bg-green-600 text-white transition flex-1 sm:flex-none" title="Aprobar">✓</button>
+                      <button type="button" (click)="rejectVacationRequest(request.id)" class="px-2.5 sm:px-3 py-1.5 text-xs font-medium rounded-lg bg-red-500 hover:bg-red-600 text-white transition flex-1 sm:flex-none" title="Rechazar">✕</button>
+                      <button type="button" (click)="deleteVacationRequest(request.id)" class="px-2.5 sm:px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-500 hover:bg-gray-600 text-white transition flex-1 sm:flex-none" title="Eliminar">🗑️</button>
                     </div>
                   </div>
                 </div>
@@ -709,21 +732,21 @@
             }
           } @else if (vacationTab === 'approved') {
             @for (request of approvedRequests; track request.id) {
-              <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition">
-                <div class="flex items-start justify-between gap-4">
+              <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-3 sm:p-4 hover:shadow-md transition">
+                <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
                   <div class="flex items-start gap-3 flex-1">
-                    <div class="w-12 h-12 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-xl font-bold text-gray-600 dark:text-gray-300">{{ request.employeeName[0] }}</div>
-                    <div class="flex-1">
-                      <h6 class="font-semibold text-gray-900 dark:text-white">{{ request.employeeName }}</h6>
-                      <p class="text-sm text-gray-600 dark:text-gray-400 mt-1"><span class="font-medium">{{ request.type === 'vacation' ? '🏖️ Vacaciones' : '📅 Día Libre' }}</span></p>
-                      <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">📅 {{ request.startDate }} - {{ request.endDate }}</p>
-                      <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">💬 {{ request.reason }}</p>
+                    <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-lg sm:text-xl font-bold text-gray-600 dark:text-gray-300 shrink-0">{{ request.employeeName[0] }}</div>
+                    <div class="flex-1 min-w-0">
+                      <h6 class="font-semibold text-gray-900 dark:text-white text-sm sm:text-base">{{ request.employeeName }}</h6>
+                      <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1"><span class="font-medium">{{ request.type === 'vacation' ? '🏖️ Vacaciones' : '📅 Día Libre' }}</span></p>
+                      <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1 break-words">📅 {{ request.startDate }} - {{ request.endDate }}</p>
+                      <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1 break-words">💬 {{ request.reason }}</p>
                     </div>
                   </div>
-                  <div class="flex flex-col items-end gap-2">
-                    <span class="px-3 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">Aprobado</span>
+                  <div class="flex flex-col sm:items-end gap-2">
+                    <span class="px-3 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 self-start sm:self-auto">Aprobado</span>
                     <div class="flex gap-2 mt-2">
-                      <button type="button" (click)="deleteVacationRequest(request.id)" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-500 hover:bg-gray-600 text-white transition" title="Eliminar">🗑️</button>
+                      <button type="button" (click)="deleteVacationRequest(request.id)" class="px-2.5 sm:px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-500 hover:bg-gray-600 text-white transition w-full sm:w-auto" title="Eliminar">🗑️</button>
                     </div>
                   </div>
                 </div>
@@ -731,21 +754,21 @@
             }
           } @else if (vacationTab === 'rejected') {
             @for (request of rejectedRequests; track request.id) {
-              <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition">
-                <div class="flex items-start justify-between gap-4">
+              <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-3 sm:p-4 hover:shadow-md transition">
+                <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
                   <div class="flex items-start gap-3 flex-1">
-                    <div class="w-12 h-12 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-xl font-bold text-gray-600 dark:text-gray-300">{{ request.employeeName[0] }}</div>
-                    <div class="flex-1">
-                      <h6 class="font-semibold text-gray-900 dark:text-white">{{ request.employeeName }}</h6>
-                      <p class="text-sm text-gray-600 dark:text-gray-400 mt-1"><span class="font-medium">{{ request.type === 'vacation' ? '🏖️ Vacaciones' : '📅 Día Libre' }}</span></p>
-                      <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">📅 {{ request.startDate }} - {{ request.endDate }}</p>
-                      <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">💬 {{ request.reason }}</p>
+                    <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-lg sm:text-xl font-bold text-gray-600 dark:text-gray-300 shrink-0">{{ request.employeeName[0] }}</div>
+                    <div class="flex-1 min-w-0">
+                      <h6 class="font-semibold text-gray-900 dark:text-white text-sm sm:text-base">{{ request.employeeName }}</h6>
+                      <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1"><span class="font-medium">{{ request.type === 'vacation' ? '🏖️ Vacaciones' : '📅 Día Libre' }}</span></p>
+                      <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1 break-words">📅 {{ request.startDate }} - {{ request.endDate }}</p>
+                      <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1 break-words">💬 {{ request.reason }}</p>
                     </div>
                   </div>
-                  <div class="flex flex-col items-end gap-2">
-                    <span class="px-3 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">Rechazado</span>
+                  <div class="flex flex-col sm:items-end gap-2">
+                    <span class="px-3 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 self-start sm:self-auto">Rechazado</span>
                     <div class="flex gap-2 mt-2">
-                      <button type="button" (click)="deleteVacationRequest(request.id)" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-500 hover:bg-gray-600 text-white transition" title="Eliminar">🗑️</button>
+                      <button type="button" (click)="deleteVacationRequest(request.id)" class="px-2.5 sm:px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-500 hover:bg-gray-600 text-white transition w-full sm:w-auto" title="Eliminar">🗑️</button>
                     </div>
                   </div>
                 </div>
@@ -753,21 +776,21 @@
             }
           } @else {
             @for (request of completedRequests; track request.id) {
-              <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition">
-                <div class="flex items-start justify-between gap-4">
+              <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-3 sm:p-4 hover:shadow-md transition">
+                <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
                   <div class="flex items-start gap-3 flex-1">
-                    <div class="w-12 h-12 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-xl font-bold text-gray-600 dark:text-gray-300">{{ request.employeeName[0] }}</div>
-                    <div class="flex-1">
-                      <h6 class="font-semibold text-gray-900 dark:text-white">{{ request.employeeName }}</h6>
-                      <p class="text-sm text-gray-600 dark:text-gray-400 mt-1"><span class="font-medium">{{ request.type === 'vacation' ? '🏖️ Vacaciones' : '📅 Día Libre' }}</span></p>
-                      <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">📅 {{ request.startDate }} - {{ request.endDate }}</p>
+                    <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-lg sm:text-xl font-bold text-gray-600 dark:text-gray-300 shrink-0">{{ request.employeeName[0] }}</div>
+                    <div class="flex-1 min-w-0">
+                      <h6 class="font-semibold text-gray-900 dark:text-white text-sm sm:text-base">{{ request.employeeName }}</h6>
+                      <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1"><span class="font-medium">{{ request.type === 'vacation' ? '🏖️ Vacaciones' : '📅 Día Libre' }}</span></p>
+                      <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1 break-words">📅 {{ request.startDate }} - {{ request.endDate }}</p>
                       <p class="text-xs text-gray-500 dark:text-gray-500 mt-2">Finalizadas</p>
                     </div>
                   </div>
-                  <div class="flex flex-col items-end gap-2">
-                    <span class="px-3 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700/50 dark:text-gray-200">Cumplida</span>
+                  <div class="flex flex-col sm:items-end gap-2">
+                    <span class="px-3 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700/50 dark:text-gray-200 self-start sm:self-auto">Cumplida</span>
                     <div class="flex gap-2 mt-2">
-                      <button type="button" (click)="deleteVacationRequest(request.id)" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-500 hover:bg-gray-600 text-white transition" title="Eliminar">🗑️</button>
+                      <button type="button" (click)="deleteVacationRequest(request.id)" class="px-2.5 sm:px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-500 hover:bg-gray-600 text-white transition w-full sm:w-auto" title="Eliminar">🗑️</button>
                     </div>
                   </div>
                 </div>
