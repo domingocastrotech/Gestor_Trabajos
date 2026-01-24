@@ -2,7 +2,7 @@ import { KeyValuePipe, CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FullCalendarComponent, FullCalendarModule } from '@fullcalendar/angular';
 
-import { Component, ViewChild, ChangeDetectorRef } from '@angular/core';
+import { Component, ViewChild, ChangeDetectorRef, HostListener, ElementRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { EventInput, CalendarOptions, DateSelectArg, EventClickArg } from '@fullcalendar/core';
 import esLocale from '@fullcalendar/core/locales/es';
@@ -362,6 +362,38 @@ export class CalenderComponent {
     isOpen: false,
   };
 
+  // Modal de solicitud de vacaciones enviada
+  vacationRequestSentModal: {
+    isOpen: boolean;
+    vacationType: string;
+    startDate: string;
+    endDate: string;
+    autoCloseTimer?: any;
+  } = {
+    isOpen: false,
+    vacationType: '',
+    startDate: '',
+    endDate: ''
+  };
+
+  // Modal de resultado de decisión de vacaciones
+  vacationResultModal: {
+    isOpen: boolean;
+    success: boolean;
+    action: 'approve' | 'reject' | null;
+    employeeName: string;
+    vacationType: string;
+    emailSent: boolean;
+    autoCloseTimer?: any;
+  } = {
+    isOpen: false,
+    success: true,
+    action: null,
+    employeeName: '',
+    vacationType: '',
+    emailSent: false
+  };
+
   // Sistema de vacaciones
   vacationRequests: VacationRequest[] = [];
   isVacationModalOpen = false;
@@ -513,6 +545,45 @@ export class CalenderComponent {
   ngAfterViewInit() {
     // Este hook se ejecuta después de que la vista está lista
     // pero el loading se maneja en ngOnInit después de cargar los datos
+
+    // Agregar listener para detectar hover en badges de vacaciones
+    setTimeout(() => {
+      const vacationBadges = document.querySelectorAll('.vacation-badge-debug');
+      console.log('[ngAfterViewInit] Encontrados badges de vacaciones:', vacationBadges.length);
+
+      vacationBadges.forEach(badge => {
+        const eventId = badge.getAttribute('data-event-id');
+        badge.addEventListener('mouseenter', (e) => {
+          console.log('[vacation-badge] MOUSEENTER en badge:', {
+            eventId,
+            x: (e as MouseEvent).clientX,
+            y: (e as MouseEvent).clientY,
+            target: (e.target as HTMLElement).tagName
+          });
+        });
+
+        badge.addEventListener('mouseleave', (e) => {
+          console.log('[vacation-badge] MOUSELEAVE en badge:', {
+            eventId,
+            x: (e as MouseEvent).clientX,
+            y: (e as MouseEvent).clientY
+          });
+        });
+
+        badge.addEventListener('mousemove', (e) => {
+          // Solo loguear cada 500ms para no saturar la consola
+          const now = Date.now();
+          if (!(badge as any).__lastMouseMoveLog || now - (badge as any).__lastMouseMoveLog > 500) {
+            console.log('[vacation-badge] MOUSEMOVE en badge:', {
+              eventId,
+              x: (e as MouseEvent).clientX,
+              y: (e as MouseEvent).clientY
+            });
+            (badge as any).__lastMouseMoveLog = now;
+          }
+        });
+      });
+    }, 500);
   }
 
   async loadEmployees() {
@@ -661,8 +732,20 @@ export class CalenderComponent {
     if (event) {
       const target = event.target as HTMLElement;
       // Verificar si el target es el badge o está dentro del badge
-      if (target.closest('.missing-location-badge') ||
-          target.classList.contains('missing-location-badge')) {
+      // Buscar hasta 5 niveles de padres para encontrar el badge
+      let element: HTMLElement | null = target;
+      let foundBadge = false;
+
+      for (let i = 0; i < 5; i++) {
+        if (!element) break;
+        if (element.classList?.contains('missing-location-badge')) {
+          foundBadge = true;
+          break;
+        }
+        element = element.parentElement;
+      }
+
+      if (foundBadge) {
         // No abrir el modal si se clickeó el badge
         console.log('[CalendarComponent] Click en badge detectado, no abriendo modal');
         event.stopPropagation();
@@ -1138,9 +1221,21 @@ export class CalenderComponent {
     // Renderizado especial para vacaciones
     if (isVacation) {
       const icon = vacationType === 'vacation' ? '🏖️' : '📅';
+      console.log('[renderEventContent] Renderizando evento de vacaciones:', {
+        title: eventInfo.event.title,
+        employeeName,
+        vacationType,
+        bgColor,
+        elementId: eventInfo.event.id
+      });
+
       return {
         html: `
-          <div class="flex items-center justify-center gap-1 p-2 text-xs font-bold" style="background-color: ${bgColor}; border-radius: 4px; color: white;">
+          <div class="flex items-center justify-center gap-1 p-2 text-xs font-bold vacation-badge-debug"
+               data-event-id="${eventInfo.event.id}"
+               onmouseenter="console.log('[tooltip] mouseenter en vacation badge', this)"
+               onmouseleave="console.log('[tooltip] mouseleave en vacation badge', this)"
+               style="background-color: ${bgColor}; border-radius: 4px; color: white;">
             <span style="font-size: 16px;">${icon}</span>
             <span class="truncate">${eventInfo.event.title}</span>
           </div>
@@ -1441,11 +1536,26 @@ export class CalenderComponent {
           });
         }
 
-        this.showAlert('success', 'Solicitud enviada', 'Tu solicitud de vacaciones ha sido enviada al administrador');
+        // Cerrar modal primero
         this.closeVacationModal();
+        this.changeDetectorRef.detectChanges();
+
+        // Mostrar modal de confirmación después de cerrar el modal
+        setTimeout(() => {
+          this.showVacationRequestSentModal(
+            this.vacationType === 'vacation' ? 'Vacaciones' : 'Día libre',
+            this.formatDate(this.vacationStartDate),
+            this.formatDate(this.vacationEndDate)
+          );
+        }, 100);
       } catch (error) {
         console.error('[CalendarComponent] Error creando solicitud de vacaciones:', error);
-        this.showAlert('error', 'Error', 'No se pudo enviar la solicitud');
+        this.closeVacationModal();
+        this.changeDetectorRef.detectChanges();
+
+        setTimeout(() => {
+          this.showAlert('error', 'Error', 'No se pudo enviar la solicitud');
+        }, 100);
       } finally {
         this.isVacationSubmitting = false;
       }
@@ -1555,20 +1665,20 @@ export class CalenderComponent {
         await this.vacationService.approve(
           requestId,
           this.currentUser.id,
-          sendEmail ? emailComment : undefined
+          emailComment || undefined,
+          sendEmail
         );
         request.status = 'approved';
         this.addVacationToCalendar(request);
-        this.showAlert('success', 'Solicitud aprobada', `La solicitud de ${request.employeeName} ha sido aprobada`);
         this.changeDetectorRef.detectChanges();
       } else if (action === 'reject') {
         await this.vacationService.reject(
           requestId,
           this.currentUser.id,
-          sendEmail ? emailComment : undefined
+          emailComment || undefined,
+          sendEmail
         );
         request.status = 'rejected';
-        this.showAlert('info', 'Solicitud rechazada', `La solicitud de ${request.employeeName} ha sido rechazada`);
         this.changeDetectorRef.detectChanges();
       }
 
@@ -1585,14 +1695,95 @@ export class CalenderComponent {
           data: { requestId: request.id }
         });
       }
+
+      // Cerrar modal primero
+      this.vacationDecisionModal.isLoading = false;
+      this.closeVacationDecisionModal();
+      this.changeDetectorRef.detectChanges();
+
+      // Mostrar modal de resultado después de cerrar el modal de decisión
+      setTimeout(() => {
+        const typeText = request.type === 'vacation' ? 'vacaciones' : 'día libre';
+        this.showVacationResultModal(action, request.employeeName, typeText, sendEmail);
+      }, 100);
+
     } catch (error) {
       console.error('[CalendarComponent] Error en decisión de vacación:', error);
-      this.showAlert('error', 'Error', 'No se pudo procesar la decisión');
-    } finally {
       this.vacationDecisionModal.isLoading = false;
-      this.changeDetectorRef.detectChanges();
       this.closeVacationDecisionModal();
+      this.changeDetectorRef.detectChanges();
+
+      setTimeout(() => {
+        this.showAlert('error', 'Error', 'No se pudo procesar la decisión');
+      }, 100);
     }
+  }
+
+  showVacationResultModal(action: 'approve' | 'reject', employeeName: string, vacationType: string, emailSent: boolean = false) {
+    // Limpiar timer anterior si existe
+    if (this.vacationResultModal.autoCloseTimer) {
+      clearTimeout(this.vacationResultModal.autoCloseTimer);
+    }
+
+    this.vacationResultModal = {
+      isOpen: true,
+      success: true,
+      action,
+      employeeName,
+      vacationType,
+      emailSent,
+      autoCloseTimer: setTimeout(() => {
+        this.closeVacationResultModal();
+      }, 5000)
+    };
+    this.changeDetectorRef.detectChanges();
+  }
+
+  closeVacationResultModal() {
+    if (this.vacationResultModal.autoCloseTimer) {
+      clearTimeout(this.vacationResultModal.autoCloseTimer);
+    }
+    this.vacationResultModal = {
+      isOpen: false,
+      success: true,
+      action: null,
+      employeeName: '',
+      vacationType: '',
+      emailSent: false
+    };
+    this.changeDetectorRef.detectChanges();
+  }
+
+  showVacationRequestSentModal(vacationType: string, startDate: string, endDate: string) {
+    // Limpiar timer anterior si existe
+    if (this.vacationRequestSentModal.autoCloseTimer) {
+      clearTimeout(this.vacationRequestSentModal.autoCloseTimer);
+    }
+
+    this.vacationRequestSentModal = {
+      isOpen: true,
+      vacationType,
+      startDate,
+      endDate,
+      autoCloseTimer: setTimeout(() => {
+        this.closeVacationRequestSentModal();
+      }, 5000)
+    };
+    this.changeDetectorRef.detectChanges();
+  }
+
+  closeVacationRequestSentModal() {
+    if (this.vacationRequestSentModal.autoCloseTimer) {
+      clearTimeout(this.vacationRequestSentModal.autoCloseTimer);
+    }
+    this.vacationRequestSentModal = {
+      isOpen: false,
+      vacationType: '',
+      startDate: '',
+      endDate: '',
+      autoCloseTimer: null
+    };
+    this.changeDetectorRef.detectChanges();
   }
 
   closeVacationDecisionModal() {
@@ -1764,20 +1955,47 @@ export class CalenderComponent {
 
   // Métodos del calendario personalizado
   openStartDatePicker() {
-    this.showStartDatePicker = true;
-    this.showEndDatePicker = false;
-    this.generateCalendar();
+    if (this.showStartDatePicker) {
+      this.closeCalendarPickers();
+    } else {
+      this.showStartDatePicker = true;
+      this.showEndDatePicker = false;
+      this.generateCalendar();
+    }
   }
 
   openEndDatePicker() {
-    this.showEndDatePicker = true;
-    this.showStartDatePicker = false;
-    this.generateCalendar();
+    if (this.showEndDatePicker) {
+      this.closeCalendarPickers();
+    } else {
+      this.showEndDatePicker = true;
+      this.showStartDatePicker = false;
+      this.generateCalendar();
+    }
   }
 
   closeCalendarPickers() {
     this.showStartDatePicker = false;
     this.showEndDatePicker = false;
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent) {
+    const target = event.target as HTMLElement;
+
+    // Verificar si el click fue dentro del contenedor de selección de fechas
+    const datePickerContainer = document.querySelector('[class*="vacation-date-picker"]');
+    const startDateButton = document.querySelector('[class*="start-date-button"]');
+    const endDateButton = document.querySelector('[class*="end-date-button"]');
+
+    // Si el click es fuera del selector de fechas y sus botones, cerrar
+    if (this.showStartDatePicker || this.showEndDatePicker) {
+      if (!target.closest('[class*="vacation-date-picker"]') &&
+          !target.closest('[class*="start-date-button"]') &&
+          !target.closest('[class*="end-date-button"]')) {
+        this.closeCalendarPickers();
+      }
+    }
   }
 
   generateCalendar() {
@@ -1862,6 +2080,15 @@ export class CalenderComponent {
     return day === today.getDate() &&
            this.calendarMonth === today.getMonth() &&
            this.calendarYear === today.getFullYear();
+  }
+
+  isPastDate(day: number | null): boolean {
+    if (day === null) return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const selectedDate = new Date(this.calendarYear, this.calendarMonth, day);
+    selectedDate.setHours(0, 0, 0, 0);
+    return selectedDate < today;
   }
 
   // Verificar si faltan localizaciones por cubrir en un día
@@ -2014,9 +2241,10 @@ export class CalenderComponent {
                       arg.el;
         }
 
-        // Asegurarse de que el contenedor tenga posición relativa
+        // Asegurarse de que el contenedor tenga posición relativa y permita overflow
         if (container.style) {
           container.style.position = 'relative';
+          container.style.overflow = 'visible';  // Permitir que el badge no se corte
         }
 
         // Crear el badge (icono circular rojo con !)
@@ -2042,6 +2270,7 @@ export class CalenderComponent {
         badge.style.cursor = 'help';
         badge.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.2)';
         badge.style.transition = 'transform 0.2s ease';
+        badge.style.pointerEvents = 'auto';  // Asegurar que recibe eventos de mouse
 
         container.appendChild(badge);
 
@@ -2054,6 +2283,7 @@ export class CalenderComponent {
         let isTooltipVisible = false;
         let autoCloseTimer: any = null;
         let outsideClickListener: ((e: Event) => void) | null = null;
+        let hideTooltipTimeout: any = null;
 
         // Evento mouseenter - mostrar tooltip
         const showTooltip = (e: MouseEvent | TouchEvent) => {
@@ -2063,8 +2293,14 @@ export class CalenderComponent {
             e.preventDefault();
           }
 
-          // Si ya existe un tooltip, no crear otro
-          if (tooltip) {
+          // Cancelar cualquier cierre pendiente
+          if (hideTooltipTimeout) {
+            clearTimeout(hideTooltipTimeout);
+            hideTooltipTimeout = null;
+          }
+
+          // Si ya existe un tooltip visible, no crear otro
+          if (tooltip && isTooltipVisible) {
             return;
           }
 
@@ -2075,7 +2311,7 @@ export class CalenderComponent {
           tooltip.className = 'missing-locations-tooltip';
           tooltip.innerHTML = tooltipContent;
           tooltip.style.position = 'fixed';
-          tooltip.style.zIndex = '999999';
+          tooltip.style.zIndex = '10000';
           tooltip.style.backgroundColor = '#fee2e2';
           tooltip.style.color = '#991b1b';
           tooltip.style.padding = '12px 16px';
@@ -2089,6 +2325,9 @@ export class CalenderComponent {
           tooltip.style.lineHeight = '1.6';
           tooltip.style.pointerEvents = 'auto';
           tooltip.style.animation = 'fadeIn 0.2s ease';
+          tooltip.style.userSelect = 'none';
+          (tooltip.style as any).webkitUserSelect = 'none';
+          tooltip.setAttribute('draggable', 'false');
 
           document.body.appendChild(tooltip);
 
@@ -2122,6 +2361,35 @@ export class CalenderComponent {
             }
           }, 10);
 
+          // Agregar listeners directamente al tooltip cuando se crea
+          if (!isTouchDevice) {
+            const handleTooltipMouseEnter = () => {
+              if (hideTooltipTimeout) {
+                clearTimeout(hideTooltipTimeout);
+                hideTooltipTimeout = null;
+              }
+            };
+
+            const handleTooltipMouseLeave = () => {
+              hideTooltipTimeout = setTimeout(() => {
+                hideTooltip();
+              }, 100);
+            };
+
+            const handleSelectStart = (e: Event) => {
+              e.preventDefault();
+            };
+
+            const handleDragStart = (e: Event) => {
+              e.preventDefault();
+            };
+
+            tooltip.addEventListener('mouseenter', handleTooltipMouseEnter);
+            tooltip.addEventListener('mouseleave', handleTooltipMouseLeave);
+            tooltip.addEventListener('selectstart', handleSelectStart);
+            tooltip.addEventListener('dragstart', handleDragStart);
+          }
+
           // Auto-cerrar después de 10 segundos
           if (autoCloseTimer) {
             clearTimeout(autoCloseTimer);
@@ -2130,24 +2398,22 @@ export class CalenderComponent {
             hideTooltip();
           }, 10000);
 
-          // Agregar listener para cerrar al hacer click/touch fuera
-          setTimeout(() => {
+          // Agregar listener para cerrar al hacer click/touch fuera (solo si no existe uno activo)
+          if (!outsideClickListener) {
             const handleOutsideClick = (event: Event) => {
               const target = event.target as HTMLElement;
-              if (tooltip && !tooltip.contains(target) && !badge.contains(target)) {
+              if (tooltip && isTooltipVisible && !tooltip.contains(target) && !badge.contains(target)) {
                 hideTooltip();
               }
             };
 
             outsideClickListener = handleOutsideClick;
-
-            // Agregar listeners tanto para click como touch
             document.addEventListener('click', handleOutsideClick, true);
             document.addEventListener('touchend', handleOutsideClick, true);
-          }, 100);
+          }
         };
 
-        // Evento mouseleave - ocultar tooltip
+          // Evento mouseleave - ocultar tooltip con delay
         const hideTooltip = () => {
           // Limpiar el timer de auto-cierre
           if (autoCloseTimer) {
@@ -2164,6 +2430,8 @@ export class CalenderComponent {
 
           isTooltipVisible = false;
           if (tooltip && tooltip.parentNode) {
+            // Desactivar pointer-events antes de ocultar para permitir clicks debajo
+            tooltip.style.pointerEvents = 'none';
             tooltip.style.opacity = '0';
             setTimeout(() => {
               if (tooltip && tooltip.parentNode) {
@@ -2218,20 +2486,12 @@ export class CalenderComponent {
         } else {
           // En desktop, usar hover
           badge.addEventListener('mouseenter', showTooltip);
-          badge.addEventListener('mouseleave', hideTooltip);
-        }
-
-        // También mantener el tooltip visible si el cursor está sobre él (solo desktop)
-        if (!isTouchDevice) {
-          setTimeout(() => {
-            const tooltips = document.querySelectorAll('.missing-locations-tooltip');
-            tooltips.forEach(tt => {
-              (tt as HTMLElement).addEventListener('mouseenter', () => {
-                // No hacer nada, mantener visible
-              });
-              (tt as HTMLElement).addEventListener('mouseleave', hideTooltip);
-            });
-          }, 100);
+          badge.addEventListener('mouseleave', () => {
+            // Usar un pequeño delay para permitir que el mouse entre al tooltip
+            hideTooltipTimeout = setTimeout(() => {
+              hideTooltip();
+            }, 100);
+          });
         }
 
         console.log(`[CalendarComponent] Badge añadido para ${dateStr} con ${count} localizaciones faltantes:`, missingLocations);

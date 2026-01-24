@@ -12,6 +12,7 @@ export class NotificationsComponent implements OnInit {
   notifications: Notification[] = [];
   isLoading = false;
   showDeleteConfirm = false;
+  showDeleteAllConfirm = false;
   notificationToDelete: number | null = null;
 
   constructor(private notificationService: NotificationService) {}
@@ -88,12 +89,20 @@ export class NotificationsComponent implements OnInit {
   }
 
   async clearAllNotifications() {
-    if (confirm('¿Está seguro de que desea eliminar todas las notificaciones?')) {
-      try {
-        await this.notificationService.clearAll();
-      } catch (error) {
-        console.error('Error eliminando todas las notificaciones:', error);
-      }
+    this.showDeleteAllConfirm = true;
+  }
+
+  closeDeleteAllConfirm() {
+    this.showDeleteAllConfirm = false;
+  }
+
+  async confirmDeleteAll() {
+    try {
+      await this.notificationService.clearAll();
+      this.closeDeleteAllConfirm();
+    } catch (error) {
+      console.error('Error eliminando todas las notificaciones:', error);
+      this.closeDeleteAllConfirm();
     }
   }
 

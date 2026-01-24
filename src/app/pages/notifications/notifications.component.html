@@ -144,4 +144,32 @@
       </div>
     </div>
   }
+
+  <!-- Modal de confirmación de eliminación de todas las notificaciones -->
+  @if (showDeleteAllConfirm) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 dark:bg-black/70">
+      <div class="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-6 max-w-sm mx-4">
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+          ¿Eliminar todas las notificaciones?
+        </h3>
+        <p class="text-sm text-gray-600 dark:text-gray-400 mb-6">
+          Esta acción eliminará todas tus notificaciones y no se puede deshacer.
+        </p>
+        <div class="flex gap-3 justify-end">
+          <button
+            (click)="closeDeleteAllConfirm()"
+            class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors"
+          >
+            Cancelar
+          </button>
+          <button
+            (click)="confirmDeleteAll()"
+            class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+          >
+            Eliminar todas
+          </button>
+        </div>
+      </div>
+    </div>
+  }
 </div>

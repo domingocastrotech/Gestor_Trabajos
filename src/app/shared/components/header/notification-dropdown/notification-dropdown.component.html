@@ -83,15 +83,15 @@
                 }
               </span>
               <span class="block flex-1">
-                <span class="mb-1.5 block text-theme-sm transition-colors" [class]="notification.read ? 'text-white dark:text-white group-hover/item:text-white dark:group-hover/item:text-white' : 'text-gray-700 dark:text-gray-300 group-hover/item:text-white dark:group-hover/item:text-white'">
-                  <span class="font-bold" [class]="notification.read ? 'text-white dark:text-white group-hover/item:text-white dark:group-hover/item:text-white' : 'text-gray-800 dark:text-white group-hover/item:text-white dark:group-hover/item:text-white'">
+                <span class="mb-1.5 block text-theme-sm transition-colors" [class]="notification.read ? 'text-gray-700 dark:text-white group-hover/item:text-gray-900 dark:group-hover/item:text-white' : 'text-gray-700 dark:text-gray-300 group-hover/item:text-gray-900 dark:group-hover/item:text-white'">
+                  <span class="font-bold" [class]="notification.read ? 'text-gray-800 dark:text-white group-hover/item:text-gray-900 dark:group-hover/item:text-white' : 'text-gray-800 dark:text-white group-hover/item:text-gray-900 dark:group-hover/item:text-white'">
                     {{ notification.title }}
                   </span>
                   <span class="block mt-1">{{ notification.message }}</span>
                 </span>
-                <span class="flex items-center gap-2 text-theme-xs transition-colors" [class]="notification.read ? 'text-white dark:text-white group-hover/item:text-white dark:group-hover/item:text-white' : 'text-gray-600 dark:text-gray-400 group-hover/item:text-white dark:group-hover/item:text-white'">
+                <span class="flex items-center gap-2 text-theme-xs transition-colors" [class]="notification.read ? 'text-gray-600 dark:text-white group-hover/item:text-gray-700 dark:group-hover/item:text-white' : 'text-gray-600 dark:text-gray-400 group-hover/item:text-gray-700 dark:group-hover/item:text-white'">
                   <span>{{ notification.type === 'task' ? 'Tarea' : 'Vacaciones' }}</span>
-                  <span class="w-1 h-1 rounded-full" [class]="notification.read ? 'bg-white group-hover/item:bg-white' : 'bg-gray-400 group-hover/item:bg-white'"></span>
+                  <span class="w-1 h-1 rounded-full" [class]="notification.read ? 'bg-gray-400 group-hover/item:bg-gray-700' : 'bg-gray-400 group-hover/item:bg-gray-700'"></span>
                   <span>{{ getTimeAgo(notification.timestamp) }}</span>
                 </span>
               </span>

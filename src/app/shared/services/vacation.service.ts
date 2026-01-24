@@ -101,7 +101,7 @@ export class VacationService {
     return data;
   }
 
-  async approve(id: number, decidedByEmployeeId: number, comment?: string): Promise<VacationRequest> {
+  async approve(id: number, decidedByEmployeeId: number, comment?: string, sendEmail: boolean = true): Promise<VacationRequest> {
     const { data, error } = await this.supabase.supabase
       .from('vacation_requests')
       .update({
@@ -114,11 +114,13 @@ export class VacationService {
       .single();
 
     if (error) throw error;
-    await this.notifyDecisionEmail(data, comment);
+    if (sendEmail) {
+      await this.notifyDecisionEmail(data, comment);
+    }
     return data;
   }
 
-  async reject(id: number, decidedByEmployeeId: number, comment?: string): Promise<VacationRequest> {
+  async reject(id: number, decidedByEmployeeId: number, comment?: string, sendEmail: boolean = true): Promise<VacationRequest> {
     const { data, error } = await this.supabase.supabase
       .from('vacation_requests')
       .update({
@@ -131,7 +133,9 @@ export class VacationService {
       .single();
 
     if (error) throw error;
-    await this.notifyDecisionEmail(data, comment);
+    if (sendEmail) {
+      await this.notifyDecisionEmail(data, comment);
+    }
     return data;
   }
 

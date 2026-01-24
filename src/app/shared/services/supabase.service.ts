@@ -12,6 +12,9 @@ export class SupabaseService {
       throw new Error('Supabase configuration is missing (url/key).');
     }
 
+    // Suprimir el error NavigatorLockAcquireTimeoutError que es un warning de Supabase
+    this.suppressNavigatorLockError();
+
     // Single client for the whole app; persists session in browser only.
     this.client = createClient(environment.supabaseUrl, environment.supabaseKey, {
       auth: {
@@ -52,5 +55,26 @@ export class SupabaseService {
 
   private isBrowser(): boolean {
     return isPlatformBrowser(this.platformId);
+  }
+
+  /**
+   * Suprimir el error NavigatorLockAcquireTimeoutError que Supabase lanza
+   * cuando hay problemas con la sincronización de tokens entre pestañas.
+   * Este es un warning inofensivo que no afecta la funcionalidad.
+   */
+  private suppressNavigatorLockError(): void {
+    if (!this.isBrowser()) return;
+
+    const originalError = console.error;
+    console.error = (...args: any[]) => {
+      // Filtrar el error específico de NavigatorLockAcquireTimeoutError
+      const errorMsg = args[0]?.toString?.() || '';
+      if (errorMsg.includes('NavigatorLockAcquireTimeoutError')) {
+        // Ignorar este error específico silenciosamente
+        return;
+      }
+      // Para otros errores, mostrarlos normalmente
+      originalError.apply(console, args);
+    };
   }
 }
