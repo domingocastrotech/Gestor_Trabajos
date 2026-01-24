@@ -2047,12 +2047,13 @@ export class CalenderComponent {
 
         // Crear el contenido del tooltip con viñetas
         const locationsList = missingLocations.map(loc => `• ${loc}`).join('<br>');
-        const tooltipContent = `<strong>Faltan tareas en:</strong><br>${locationsList}<br><br><small style="color: #7f1d1d; font-size: 11px; opacity: 0.8;">Posiciona el cursor para ver detalles</small>`;
+        const tooltipContent = `<strong>Faltan tareas en:</strong><br>${locationsList}<br><br><small style="color: #7f1d1d; font-size: 11px; opacity: 0.8;">Crea una tarea para cubrir estas localizaciones</small>`;
 
         // Variable para mantener referencia al tooltip
         let tooltip: HTMLElement | null = null;
         let isTooltipVisible = false;
         let autoCloseTimer: any = null;
+        let outsideClickListener: ((e: Event) => void) | null = null;
 
         // Evento mouseenter - mostrar tooltip
         const showTooltip = (e: MouseEvent | TouchEvent) => {
@@ -2128,6 +2129,22 @@ export class CalenderComponent {
           autoCloseTimer = setTimeout(() => {
             hideTooltip();
           }, 10000);
+
+          // Agregar listener para cerrar al hacer click/touch fuera
+          setTimeout(() => {
+            const handleOutsideClick = (event: Event) => {
+              const target = event.target as HTMLElement;
+              if (tooltip && !tooltip.contains(target) && !badge.contains(target)) {
+                hideTooltip();
+              }
+            };
+
+            outsideClickListener = handleOutsideClick;
+
+            // Agregar listeners tanto para click como touch
+            document.addEventListener('click', handleOutsideClick, true);
+            document.addEventListener('touchend', handleOutsideClick, true);
+          }, 100);
         };
 
         // Evento mouseleave - ocultar tooltip
@@ -2136,6 +2153,13 @@ export class CalenderComponent {
           if (autoCloseTimer) {
             clearTimeout(autoCloseTimer);
             autoCloseTimer = null;
+          }
+
+          // Remover el listener de click fuera
+          if (outsideClickListener) {
+            document.removeEventListener('click', outsideClickListener, true);
+            document.removeEventListener('touchend', outsideClickListener, true);
+            outsideClickListener = null;
           }
 
           isTooltipVisible = false;
@@ -2197,33 +2221,18 @@ export class CalenderComponent {
           badge.addEventListener('mouseleave', hideTooltip);
         }
 
-        // Cerrar tooltip al hacer click fuera
-        if (isTouchDevice) {
-          const closeOnClickOutside = (e: Event) => {
-            const target = e.target as HTMLElement;
-            if (tooltip && !tooltip.contains(target) && !badge.contains(target)) {
-              hideTooltip();
-              document.removeEventListener('click', closeOnClickOutside);
-            }
-          };
-
+        // También mantener el tooltip visible si el cursor está sobre él (solo desktop)
+        if (!isTouchDevice) {
           setTimeout(() => {
-            if (isTooltipVisible) {
-              document.addEventListener('click', closeOnClickOutside);
-            }
+            const tooltips = document.querySelectorAll('.missing-locations-tooltip');
+            tooltips.forEach(tt => {
+              (tt as HTMLElement).addEventListener('mouseenter', () => {
+                // No hacer nada, mantener visible
+              });
+              (tt as HTMLElement).addEventListener('mouseleave', hideTooltip);
+            });
           }, 100);
         }
-
-        // También mantener el tooltip visible si el cursor está sobre él
-        setTimeout(() => {
-          const tooltips = document.querySelectorAll('.missing-locations-tooltip');
-          tooltips.forEach(tt => {
-            (tt as HTMLElement).addEventListener('mouseenter', () => {
-              // No hacer nada, mantener visible
-            });
-            (tt as HTMLElement).addEventListener('mouseleave', hideTooltip);
-          });
-        }, 100);
 
         console.log(`[CalendarComponent] Badge añadido para ${dateStr} con ${count} localizaciones faltantes:`, missingLocations);
       }
