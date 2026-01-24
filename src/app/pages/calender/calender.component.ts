@@ -83,27 +83,77 @@ interface CalendarEvent extends EventInput {
       }
     }
 
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateX(-4px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    @keyframes pulseGlow {
+      0%, 100% {
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      }
+      50% {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      }
+    }
+
     :host ::ng-deep {
+      /* ===== ESTILOS DE TARJETAS DE EVENTOS ===== */
+      .event-card {
+        animation: slideIn 0.3s ease-out;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        cursor: pointer;
+        position: relative;
+      }
+
+      .event-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+      }
+
+      .event-card.task-card {
+        min-height: 52px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
+
+      .event-card.vacation-card {
+        min-height: 36px;
+        display: flex;
+        align-items: center;
+      }
+
+      /* ===== ESTILOS DEL CALENDARIO BASE ===== */
       .fc .fc-daygrid-day-frame {
         min-height: 100px;
       }
 
       .fc .fc-daygrid-day-events {
-        margin-top: 2px;
+        margin-top: 4px;
       }
 
       .fc .fc-event {
         padding: 0 !important;
-        border-radius: 4px !important;
+        border-radius: 6px !important;
+        border: none !important;
+        margin-bottom: 4px !important;
       }
 
       .fc .fc-event-main {
-        padding: 4px !important;
-        overflow: hidden;
+        padding: 0 !important;
+        overflow: visible;
       }
 
       .fc-daygrid-event {
-        margin-bottom: 2px !important;
+        margin-bottom: 4px !important;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15) !important;
       }
 
       .fc-event-title {
@@ -112,28 +162,39 @@ interface CalendarEvent extends EventInput {
         overflow: hidden;
         text-overflow: ellipsis;
         display: -webkit-box;
-        -webkit-line-clamp: 3;
+        -webkit-line-clamp: 2;
         -webkit-box-orient: vertical;
+        padding: 0 !important;
+        margin: 0 !important;
       }
 
+      /* ===== BOTÓN "MÁS EVENTOS" ===== */
       .fc .fc-more-link {
-        color: #111827 !important; /* negro en modo claro */
-        font-weight: 600;
+        color: #111827 !important;
+        font-weight: 700;
         display: inline-flex;
         align-items: center;
         justify-content: center;
         gap: 6px;
-        padding: 6px 12px;
-        border-radius: 9999px;
-        background: #e5e7eb;
+        padding: 7px 14px;
+        border-radius: 6px;
+        background: linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%);
         border: 1px solid #d1d5db;
-        font-size: 13px;
-        margin-top: 8px;
+        font-size: 12px;
+        margin-top: 6px;
         margin-left: auto;
         margin-right: auto;
         width: auto;
         text-align: center;
         text-decoration: none;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+      }
+
+      .fc .fc-more-link:hover {
+        background: linear-gradient(135deg, #d1d5db 0%, #b4b8bd 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
       }
 
       .fc .fc-more-link .fc-more-text {
@@ -141,22 +202,22 @@ interface CalendarEvent extends EventInput {
         font-weight: 700;
         line-height: 1.2;
       }
+
       .fc .fc-more-link span,
       .fc .fc-more-link .fc-more-link-inner {
         color: inherit !important;
       }
 
       .dark .fc .fc-more-link,
+      :host-context(.dark) .fc .fc-more-link {
+        color: #ffffff !important;
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.07) 100%);
+        border-color: rgba(255, 255, 255, 0.15);
+      }
+
       .dark .fc .fc-more-link:hover,
-      .dark .fc .fc-more-link:focus,
-      .dark .fc .fc-more-link:visited,
-      :host-context(.dark) .fc .fc-more-link,
-      :host-context(.dark) .fc .fc-more-link:hover,
-      :host-context(.dark) .fc .fc-more-link:focus,
-      :host-context(.dark) .fc .fc-more-link:visited {
-        color: #ffffff !important; /* blanco en modo oscuro */
-        background: rgba(255, 255, 255, 0.08);
-        border-color: rgba(255, 255, 255, 0.16);
+      :host-context(.dark) .fc .fc-more-link:hover {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.1) 100%);
       }
 
       .dark .fc .fc-more-link span,
@@ -166,31 +227,31 @@ interface CalendarEvent extends EventInput {
         color: #ffffff !important;
       }
 
-      /* Eliminado el estilo circular del icono para evitar la "bola" */
-
-      /* Indicador de localizaciones faltantes - Badge rojo */
+      /* ===== BADGE DE LOCALIZACIONES FALTANTES ===== */
       .missing-location-badge {
         position: absolute;
         top: 4px;
         right: 4px;
-        width: 14px;
-        height: 14px;
+        width: 18px;
+        height: 18px;
         background-color: #ef4444 !important;
         border-radius: 50%;
         color: white;
-        font-size: 9px;
+        font-size: 10px;
         font-weight: bold;
         display: flex !important;
         align-items: center;
         justify-content: center;
-        z-index: 10;
+        z-index: 20;
         cursor: help;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-        transition: transform 0.2s ease;
+        box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        border: 2px solid white;
       }
 
       .missing-location-badge:hover {
-        transform: scale(1.2);
+        transform: scale(1.15);
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
       }
 
       .dark .missing-location-badge,
@@ -198,11 +259,7 @@ interface CalendarEvent extends EventInput {
         background-color: #ef4444 !important;
       }
 
-      .fc-daygrid-day-top {
-        position: relative;
-      }
-
-      /* Tooltip personalizado */
+      /* ===== TOOLTIP PERSONALIZADO ===== */
       .missing-locations-tooltip {
         position: fixed !important;
         background-color: #fee2e2 !important;
@@ -213,15 +270,16 @@ interface CalendarEvent extends EventInput {
         font-size: 13px !important;
         white-space: normal !important;
         z-index: 99999 !important;
-        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2) !important;
+        box-shadow: 0 6px 16px rgba(239, 68, 68, 0.25) !important;
         min-width: 180px !important;
         max-width: 300px !important;
         text-align: left !important;
         line-height: 1.6 !important;
-        pointer-events: none !important;
+        pointer-events: auto !important;
         display: block !important;
         opacity: 1 !important;
         visibility: visible !important;
+        animation: fadeIn 0.2s ease !important;
       }
 
       .dark .missing-locations-tooltip,
@@ -251,9 +309,14 @@ interface CalendarEvent extends EventInput {
 
       .missing-locations-tooltip strong {
         color: #991b1b !important;
-        font-weight: 600 !important;
+        font-weight: 700 !important;
         display: block !important;
-        margin-bottom: 4px !important;
+        margin-bottom: 8px !important;
+      }
+
+      .missing-locations-tooltip > div {
+        margin: 4px 0;
+        padding-left: 4px;
       }
 
       .fc .fc-daygrid-day-top {
@@ -268,8 +331,8 @@ interface CalendarEvent extends EventInput {
         display: inline-flex;
         align-items: center;
         gap: 4px;
+        font-weight: 600;
       }
-
     }
   `
 })
@@ -1433,14 +1496,25 @@ export class CalenderComponent {
     const location = eventInfo.event.extendedProps.location;
     const startTime = eventInfo.event.extendedProps.startTime;
     const endTime = eventInfo.event.extendedProps.endTime;
-    const timeText = startTime && endTime ? `${this.formatTimeWithoutSeconds(startTime)}-${this.formatTimeWithoutSeconds(endTime)}` : '';
+    const startTimeFormatted = startTime ? this.formatTimeWithoutSeconds(startTime) : '';
+    const endTimeFormatted = endTime ? this.formatTimeWithoutSeconds(endTime) : '';
     const bgColor = eventInfo.event.backgroundColor || '#6366f1';
     const isVacation = eventInfo.event.extendedProps.isVacation;
     const vacationType = eventInfo.event.extendedProps.vacationType;
 
+    // Calcular color más claro para el gradiente y más oscuro para el borde
+    const lighterColor = this.lightenColor(bgColor, 25);
+    const borderColor = this.darkenColor(bgColor, 25);
+
+    // Helper para truncar texto
+    const truncateText = (text: string, maxLength: number = 15): string => {
+      return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+    };
+
     // Renderizado especial para vacaciones
     if (isVacation) {
       const icon = vacationType === 'vacation' ? '🏖️' : '📅';
+      const truncatedTitle = truncateText(eventInfo.event.title, 18);
       console.log('[renderEventContent] Renderizando evento de vacaciones:', {
         title: eventInfo.event.title,
         employeeName,
@@ -1451,13 +1525,22 @@ export class CalenderComponent {
 
       return {
         html: `
-          <div class="flex items-center justify-center gap-1 p-2 text-xs font-bold vacation-badge-debug"
+          <div class="event-card vacation-card"
                data-event-id="${eventInfo.event.id}"
                onmouseenter="console.log('[tooltip] mouseenter en vacation badge', this)"
                onmouseleave="console.log('[tooltip] mouseleave en vacation badge', this)"
-               style="background-color: ${bgColor}; border-radius: 4px; color: white;">
-            <span style="font-size: 16px;">${icon}</span>
-            <span class="truncate">${eventInfo.event.title}</span>
+               style="background: linear-gradient(135deg, ${lighterColor} 0%, ${bgColor} 100%); 
+                       border-left: 4px solid ${borderColor}; 
+                       border-radius: 6px; 
+                       color: white;
+                       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+                       padding: 5px 6px;
+                       display: flex;
+                       align-items: center;
+                       gap: 5px;">
+              <span style="font-size: 18px; flex-shrink: 0; line-height: 1;">${icon}</span>
+              <span style="font-size: 12px; font-weight: 700; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2;">${truncatedTitle}</span>
+            </div>
           </div>
         `
       };
@@ -1465,21 +1548,62 @@ export class CalenderComponent {
 
     // Renderizado normal para tareas con avatar
     const avatarHtml = employeeAvatar
-      ? `<img src="${employeeAvatar}" alt="${employeeName}" class="w-5 h-5 rounded-full object-cover border border-white/20" style="flex-shrink: 0;">`
-      : `<div class="w-5 h-5 rounded-full flex items-center justify-center text-white text-xs font-bold" style="background-color: rgba(255,255,255,0.2); flex-shrink: 0;">${employeeName ? employeeName[0] : 'T'}</div>`;
+      ? `<img src="${employeeAvatar}" alt="${employeeName}" class="task-avatar" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(255,255,255,0.4); box-shadow: 0 2px 4px rgba(0,0,0,0.2); flex-shrink: 0;">`
+      : `<div class="task-avatar" style="width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 11px; font-weight: bold; border: 2px solid rgba(255,255,255,0.4); background: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.15) 100%); box-shadow: 0 2px 4px rgba(0,0,0,0.2); flex-shrink: 0;">${employeeName ? employeeName[0] : 'T'}</div>`;
 
+    const hasDetails = location || (startTimeFormatted && endTimeFormatted);
+    const employeeDisplayName = employeeName || 'Tarea';
+    
     return {
       html: `
-        <div class="flex flex-col gap-0.5 p-1 text-xs" style="background-color: ${bgColor}; border-radius: 4px; color: white;">
-          <div class="flex items-center gap-1 min-h-[20px]">
+        <div class="event-card task-card" 
+             style="background: linear-gradient(135deg, ${lighterColor} 0%, ${bgColor} 100%);
+                     border-left: 4px solid ${borderColor};
+                     border-radius: 6px;
+                     color: white;
+                     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+                     overflow: hidden;
+                     padding: 6px 7px;
+                     display: flex;
+                     flex-direction: column;
+                     align-items: flex-start;
+                     gap: 2px;">
+          <div class="avatar-container">
             ${avatarHtml}
-            <span class="font-semibold truncate">${employeeName || 'Tarea'}</span>
           </div>
-          ${location ? `<div class="truncate text-white/90 pl-6">📍 ${location}</div>` : ''}
-          ${timeText ? `<div class="truncate text-white/90 pl-6">🕐 ${timeText}</div>` : ''}
+          <div class="task-content" style="display: flex; flex-direction: column; justify-content: center; gap: 1px; flex: 1; min-width: 0; width: 100%; overflow: hidden;">
+            <div class="task-name text-xs text-white font-semibold" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; font-size: 13px; font-weight: 700; line-height: 1.2;">
+              ${employeeDisplayName}
+            </div>
+            ${location ? `<div class="task-location text-xs text-white/95" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; font-size: 11px; line-height: 1.1;">📍 ${location}</div>` : ''}
+            ${startTimeFormatted && endTimeFormatted ? `<div class="time-range text-xs text-white/95 font-semibold" style="white-space: normal; overflow: visible; width: 100%; font-size: 11px; font-weight: 600; line-height: 1.2;">🕐 ${startTimeFormatted}<span class="time-separator"> - </span>${endTimeFormatted}</div>` : ''}
+          </div>
         </div>
       `
     };
+  }
+
+  // Función auxiliar para oscurecer colores
+  private darkenColor(color: string, percent: number): string {
+    const num = parseInt(color.replace('#', ''), 16);
+    const amt = Math.round(2.55 * percent);
+    const R = (num >> 16) - amt;
+    const G = (num >> 8 & 0x00FF) - amt;
+    const B = (num & 0x0000FF) - amt;
+    return '#' + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 +
+      (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 + (B < 255 ? B < 1 ? 0 : B : 255))
+      .toString(16).slice(1);
+  }
+
+  // Función auxiliar para aclarar colores
+  private lightenColor(color: string, percent: number): string {
+    const num = parseInt(color.replace('#', ''), 16);
+    const amt = Math.round(2.55 * percent);
+    const R = Math.min(255, (num >> 16) + amt);
+    const G = Math.min(255, (num >> 8 & 0x00FF) + amt);
+    const B = Math.min(255, (num & 0x0000FF) + amt);
+    return '#' + (0x1000000 + R * 0x10000 + G * 0x100 + B)
+      .toString(16).slice(1);
   }
 
   // Detectar conflictos de horarios

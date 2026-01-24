@@ -1,4 +1,4 @@
-/* Animación de entrada suave para el tooltip */
+/* ===== ANIMACIONES ===== */
 @keyframes fadeInTooltip {
 	from {
 		opacity: 0;
@@ -10,13 +10,124 @@
 	}
 }
 
-/* Indicador de localizaciones faltantes - Badge rojo */
+@keyframes cardSlideIn {
+	from {
+		opacity: 0;
+		transform: translateX(-4px);
+	}
+	to {
+		opacity: 1;
+		transform: translateX(0);
+	}
+}
+
+/* ===== ESTILOS GLOBALES DEL CALENDARIO RESPONSIVO ===== */
+.custom-calendar {
+	width: 100%;
+	height: 100%;
+}
+
+.fc {
+	overflow-x: auto !important;
+	overflow-y: visible !important;
+}
+
+.fc .fc-daygrid-day-frame {
+	overflow: visible !important;
+}
+
+.fc .fc-daygrid-day-events {
+	overflow: visible !important;
+	flex-wrap: wrap;
+}
+
+/* Asegurar que los eventos se adapten al contenido */
+.fc .fc-event {
+	border: none !important;
+	overflow: visible !important;
+}
+
+/* ===== TARJETAS DE EVENTOS MEJORADAS ===== */
+.event-card {
+	animation: cardSlideIn 0.3s ease-out;
+	transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+	cursor: pointer;
+	border-radius: 6px;
+	overflow: visible;
+}
+
+.event-card:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+}
+
+.event-card.task-card {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+}
+
+.event-card.vacation-card {
+	display: flex;
+	align-items: center;
+	justify-content: flex-start;
+}
+
+.task-content {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	word-break: break-word;
+	width: 100%;
+	gap: 1px;
+}
+
+.task-name {
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+	line-height: 1.1;
+	font-size: 11px;
+}
+
+.task-location {
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	text-shadow: 0 1px 1px rgba(0, 0, 0, 0.3);
+	font-size: 10px;
+	line-height: 1;
+}
+
+.time-range {
+	white-space: normal;
+	overflow: visible;
+	text-shadow: 0 1px 1px rgba(0, 0, 0, 0.3);
+	line-height: 1.2;
+	font-size: 10px;
+}
+
+.vacation-content {
+	display: flex;
+	align-items: center;
+	white-space: normal;
+	word-break: break-word;
+	width: 100%;
+}
+
+/* ===== RANGO DE HORAS ===== */
+.time-separator {
+	display: block;
+}
+
+/* ===== BADGE DE LOCALIZACIONES FALTANTES ===== */
 .missing-location-badge {
 	position: absolute;
 	top: 4px;
 	right: 4px;
-	width: 16px;
-	height: 16px;
+	width: 18px;
+	height: 18px;
 	background-color: #ef4444 !important;
 	border-radius: 50%;
 	color: white;
@@ -27,13 +138,14 @@
 	justify-content: center;
 	z-index: 20;
 	cursor: help;
-	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-	transition: transform 0.2s ease, box-shadow 0.2s ease;
+	box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+	transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 	border: 2px solid white;
 }
+
 .missing-location-badge:hover {
-	transform: scale(1.25);
-	box-shadow: 0 4px 8px rgba(239, 68, 68, 0.4);
+	transform: scale(1.15);
+	box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
 }
 .missing-locations-tooltip {
 	position: fixed !important;
@@ -45,7 +157,7 @@
 	font-size: 13px !important;
 	white-space: normal !important;
 	z-index: 999999 !important;
-	box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3) !important;
+	box-shadow: 0 6px 16px rgba(239, 68, 68, 0.25) !important;
 	min-width: 180px !important;
 	max-width: 300px !important;
 	text-align: left !important;
@@ -83,9 +195,9 @@
 
 .missing-locations-tooltip strong {
 	color: #991b1b !important;
-	font-weight: 600 !important;
+	font-weight: 700 !important;
 	display: block !important;
-	margin-bottom: 6px !important;
+	margin-bottom: 8px !important;
 }
 
 .missing-locations-tooltip > div {
@@ -102,10 +214,170 @@
 	z-index: 999999 !important;
 }
 
-/* ===== ESTILOS RESPONSIVOS PARA MÓVIL ===== */
+/* ===== ESTILOS RESPONSIVOS OPTIMIZADOS ===== */
 
-/* Reducir tamaños de fuente en móvil */
-@media (max-width: 640px) {
+/* Móvil muy pequeño (< 480px) */
+@media (max-width: 480px) {
+	.fc {
+		font-size: 0.65rem;
+	}
+
+	.fc .fc-button-primary {
+		font-size: 0.55rem;
+		padding: 0.3rem 0.5rem;
+		height: auto;
+		line-height: 1.2;
+	}
+
+	.fc .fc-toolbar.fc-header-toolbar {
+		margin-bottom: 0.2rem;
+		flex-direction: column;
+		gap: 0.3rem;
+		flex-wrap: wrap;
+	}
+
+	.fc .fc-toolbar-chunk {
+		margin: 0;
+		width: 100%;
+		min-width: 0;
+	}
+
+	.fc .fc-button-group {
+		flex-wrap: wrap;
+		gap: 0.2rem;
+		width: 100%;
+		justify-content: space-between;
+	}
+
+	.fc .fc-daygrid-day-number {
+		padding: 2px 1px;
+		font-size: 0.6rem;
+		font-weight: 700;
+	}
+
+	.fc .fc-daygrid-day-frame {
+		min-height: auto !important;
+		height: auto !important;
+	}
+
+	.fc .fc-daygrid-day-events {
+		margin-top: 2px;
+		overflow: visible !important;
+	}
+
+	.fc .fc-daygrid-day-cell {
+		height: auto !important;
+	}
+
+	.event-card.task-card {
+		min-height: auto;
+		padding: 3px 4px !important;
+		flex-direction: column;
+		width: 100%;
+		gap: 1px !important;
+	}
+
+	.event-card.task-card .avatar-container {
+		display: none !important;
+		width: 0 !important;
+		height: 0 !important;
+		margin: 0 !important;
+		padding: 0 !important;
+	}
+
+	.task-content {
+		width: 100%;
+		min-width: 0;
+	}
+
+	.task-name {
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.task-location {
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.time-range {
+		white-space: normal;
+		overflow: visible;
+	}
+
+	.time-separator {
+		display: block;
+	}
+
+	.event-card.vacation-card {
+		min-height: auto;
+		padding: 3px 4px !important;
+		width: 100%;
+		gap: 3px !important;
+	}
+
+	.fc .fc-event {
+		font-size: 0.7rem;
+		padding: 0 !important;
+		margin-bottom: 2px !important;
+	}
+
+	.fc .fc-event-title {
+		font-size: 0.68rem;
+		padding: 0;
+		white-space: normal;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		display: -webkit-box;
+		-webkit-line-clamp: 2;
+		-webkit-box-orient: vertical;
+	}
+
+	.fc .fc-col-header-cell {
+		padding: 2px 1px;
+		font-size: 0.6rem;
+		font-weight: 600;
+	}
+
+	.fc .fc-daygrid-day {
+		border-width: 0.5px;
+	}
+
+	.fc-more {
+		font-size: 0.55rem;
+		padding: 0;
+	}
+
+	.fc-more-text {
+		font-size: 0.55rem;
+	}
+
+	.fc .fc-more-link {
+		padding: 4px 8px;
+		font-size: 10px;
+		margin-top: 4px;
+	}
+
+	.missing-location-badge {
+		width: 14px;
+		height: 14px;
+		font-size: 8px;
+		top: 2px;
+		right: 2px;
+	}
+
+	.missing-locations-tooltip {
+		min-width: 120px;
+		max-width: 200px;
+		font-size: 11px;
+		padding: 8px 12px !important;
+	}
+}
+
+/* Móvil medium (481px - 640px) */
+@media (min-width: 481px) and (max-width: 640px) {
 	.fc {
 		font-size: 0.73rem;
 	}
@@ -142,37 +414,62 @@
 	.fc .fc-daygrid-day-number {
 		padding: 1px 2px;
 		font-size: 0.68rem;
+		font-weight: 700;
 	}
 
 	.fc .fc-daygrid-day-frame {
-		min-height: 50px;
+		min-height: auto !important;
+		height: auto !important;
+	}
+
+	.fc .fc-daygrid-day-cell {
+		height: auto !important;
 	}
 
 	.fc .fc-daygrid-day-events {
-		margin-top: 1px;
+		margin-top: 2px;
+		overflow: visible !important;
+	}
+
+	.event-card.task-card {
+		min-height: auto;
+		padding: 3px 4px !important;
+		width: 100%;
+		gap: 1px !important;
+	}
+
+	.event-card.task-card .avatar-container {
+		display: none;
+	}
+
+	.event-card.vacation-card {
+		min-height: auto;
+		padding: 3px 4px !important;
+		width: 100%;
+		gap: 3px !important;
 	}
 
 	.fc .fc-event {
 		font-size: 0.62rem;
-		padding: 0.5px 1px;
-		margin-bottom: 1px;
+		padding: 0 !important;
+		margin-bottom: 2px !important;
 	}
 
 	.fc .fc-event-title {
-		font-size: 0.62rem;
-		padding: 0px 1px;
+		font-size: 0.72rem;
+		padding: 0;
 		white-space: normal;
 		overflow: hidden;
 		text-overflow: ellipsis;
 		display: -webkit-box;
-		-webkit-line-clamp: 1;
+		-webkit-line-clamp: 2;
 		-webkit-box-orient: vertical;
 	}
 
 	.fc .fc-col-header-cell {
 		padding: 2px 1px;
 		font-size: 0.68rem;
-		font-weight: 500;
+		font-weight: 600;
 	}
 
 	.fc .fc-daygrid-day {
@@ -181,25 +478,23 @@
 
 	.fc-more {
 		font-size: 0.62rem;
-		padding: 0px 2px;
+		padding: 2px;
 	}
 
 	.fc-more-text {
 		font-size: 0.62rem;
 	}
 
-	.fc .fc-daygrid-day-bg {
-		min-height: 45px;
-	}
-
-	.fc .fc-scrollgrid-sync-inner {
-		overflow: visible;
+	.fc .fc-more-link {
+		padding: 5px 10px;
+		font-size: 11px;
+		margin-top: 4px;
 	}
 
 	.missing-location-badge {
-		width: 12px;
-		height: 12px;
-		font-size: 8px;
+		width: 14px;
+		height: 14px;
+		font-size: 9px;
 		top: 2px;
 		right: 2px;
 	}
@@ -208,11 +503,11 @@
 		min-width: 140px;
 		max-width: 240px;
 		font-size: 11px;
-		padding: 6px 10px;
+		padding: 8px 12px !important;
 	}
 }
 
-/* Mejorar para tablet */
+/* Tablet (641px - 1024px) */
 @media (min-width: 641px) and (max-width: 1024px) {
 	.fc {
 		font-size: 0.85rem;
@@ -224,11 +519,79 @@
 	}
 
 	.fc .fc-daygrid-day-frame {
-		min-height: 80px;
+		min-height: auto !important;
+		height: auto !important;
+	}
+
+	.fc .fc-daygrid-day-cell {
+		height: auto !important;
+	}
+
+	.fc .fc-daygrid-day-events {
+		overflow: visible !important;
+	}
+
+	.event-card.task-card {
+		min-height: auto;
+		padding: 4px 6px !important;
+		flex-direction: column;
+		width: 100%;
+	}
+
+	.event-card.task-card .avatar-container {
+		display: none !important;
+		width: 0 !important;
+		height: 0 !important;
+		margin: 0 !important;
+		padding: 0 !important;
+	}
+
+	.task-content {
+		width: 100%;
+		min-width: 0;
+	}
+
+	.task-name {
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.task-location {
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.time-range {
+		white-space: normal;
+		overflow: visible;
+	}
+
+	.time-separator {
+		display: block;
+	}
+
+	.event-card.vacation-card {
+		min-height: auto;
+		padding: 4px 6px !important;
+		width: 100%;
+	}
+
+	.missing-location-badge {
+		width: 16px;
+		height: 16px;
+		font-size: 9px;
+	}
+
+	.missing-locations-tooltip {
+		min-width: 160px;
+		max-width: 280px;
+		font-size: 12px;
 	}
 }
 
-/* Desktop */
+/* Desktop (> 1024px) */
 @media (min-width: 1025px) {
 	.fc {
 		font-size: 0.95rem;
@@ -236,5 +599,87 @@
 
 	.fc .fc-daygrid-day-frame {
 		min-height: 120px;
+		height: auto;
+	}
+
+	.time-separator {
+		display: inline;
+	}
+
+	.time-separator::before {
+		content: " - ";
+	}
+
+	.event-card.task-card {
+		min-height: auto;
+		flex-direction: row;
+		align-items: flex-start;
+		width: 100%;
+		padding: 10px 12px !important;
+		gap: 10px !important;
+	}
+
+	.event-card.task-card .avatar-container {
+		display: flex !important;
+	}
+
+	.event-card.task-card .avatar-container img,
+	.event-card.task-card .avatar-container div {
+		width: 36px !important;
+		height: 36px !important;
+		font-size: 14px !important;
+	}
+
+	.task-name {
+		white-space: normal;
+		overflow: visible;
+		text-overflow: clip;
+		font-size: 22px !important;
+		line-height: 1.3;
+		font-weight: 700;
+	}
+
+	.task-location {
+		white-space: normal;
+		overflow: visible;
+		text-overflow: clip;
+		font-size: 18px !important;
+		line-height: 1.2;
+	}
+
+	.time-range {
+		white-space: normal;
+		overflow: visible;
+		font-size: 18px !important;
+		line-height: 1.3;
+		font-weight: 600;
+	}
+
+	.event-card.vacation-card {
+		min-height: auto;
+		width: 100%;
+		padding: 8px 10px !important;
+		gap: 10px !important;
+	}
+
+	.event-card.vacation-card span:first-child {
+		font-size: 28px !important;
+	}
+
+	.event-card.vacation-card span:last-child {
+		font-size: 19px !important;
+		font-weight: 700;
+	}
+
+	.missing-location-badge {
+		width: 18px;
+		height: 18px;
+		font-size: 10px;
+	}
+
+	.missing-locations-tooltip {
+		min-width: 180px;
+		max-width: 300px;
+		font-size: 13px;
 	}
 }
