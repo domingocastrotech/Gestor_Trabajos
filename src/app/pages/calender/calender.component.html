@@ -228,15 +228,12 @@
           type="checkbox"
           class="mt-1 h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500 dark:border-gray-600"
           [(ngModel)]="sendTaskEmail"
-          [disabled]="!!selectedEvent || !eventEmployeeId"
+          [disabled]="!eventEmployeeId"
         />
         <label for="send-task-email" class="text-sm text-gray-700 dark:text-gray-300">
-          Enviar esta tarea por correo electrónico al empleado seleccionado.
+          Enviar {{ selectedEvent ? 'actualización' : 'esta tarea' }} por correo electrónico al empleado seleccionado.
           @if (!eventEmployeeId) {
             <span class="block text-xs text-gray-500 dark:text-gray-400">Selecciona un empleado para habilitar esta opción.</span>
-          }
-          @if (!!selectedEvent) {
-            <span class="block text-xs text-gray-500 dark:text-gray-400">Disponible solo al crear una nueva tarea.</span>
           }
         </label>
       </div>
@@ -424,6 +421,58 @@
             class="flex-1 px-4 py-2 rounded-lg bg-yellow-600 hover:bg-yellow-700 text-white font-medium text-sm transition"
           >
             Crear igualmente
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Modal de Confirmación de Conflictos de Ubicación -->
+  @if (showLocationConflictModal) {
+    <div class="fixed inset-0 z-[999999] flex items-center justify-center bg-black/50 dark:bg-black/70" (click)="rejectLocationConflictCreation()">
+      <div class="rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-6 max-w-md w-full mx-4 shadow-2xl" (click)="$event.stopPropagation()">
+        <div class="flex items-start gap-4">
+          <div class="flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-orange-100 dark:bg-orange-900/30">
+            <svg class="h-6 w-6 text-orange-600 dark:text-orange-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
+            </svg>
+          </div>
+          <div class="flex-1">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">⚠️ Empleado en la misma ubicación</h3>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              Ya existe otro empleado en esta ubicación durante el mismo rango horario. ¿Deseas agregar esta tarea de todas formas?
+            </p>
+            @if (locationConflictEvent) {
+              <div class="bg-orange-50 dark:bg-orange-900/20 rounded-lg p-3 mb-4 border border-orange-200 dark:border-orange-800">
+                <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Empleado ya asignado:</p>
+                <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  <strong>{{ locationConflictEvent.extendedProps.employeeName }}</strong>
+                </p>
+                <p class="text-sm text-gray-600 dark:text-gray-400">
+                  📍 {{ locationConflictEvent.extendedProps.location }}
+                </p>
+                <p class="text-sm text-gray-600 dark:text-gray-400">
+                  🕐 {{ formatTimeWithoutSeconds(locationConflictEvent.extendedProps.startTime) }} - {{ formatTimeWithoutSeconds(locationConflictEvent.extendedProps.endTime) }}
+                </p>
+              </div>
+            }
+          </div>
+        </div>
+
+        <div class="flex gap-3 mt-6">
+          <button
+            type="button"
+            (click)="rejectLocationConflictCreation()"
+            class="flex-1 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 font-medium text-sm transition"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            (click)="proceedWithLocationConflictCreation()"
+            class="flex-1 px-4 py-2 rounded-lg bg-orange-600 hover:bg-orange-700 text-white font-medium text-sm transition"
+          >
+            Agregar igualmente
           </button>
         </div>
       </div>
@@ -849,7 +898,7 @@
 
   <!-- Modal de confirmación de eliminación de tarea -->
   @if (deleteConfirmation.isOpen) {
-    <div class="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 px-4" (click)="closeDeleteConfirmation()">
+    <div class="fixed inset-0 z-[999999] flex items-center justify-center bg-black/40 px-4" (click)="closeDeleteConfirmation()">
       <div
         class="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl dark:bg-gray-900"
         (click)="$event.stopPropagation()"

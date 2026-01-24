@@ -31,6 +31,14 @@ console.log('[Mail-send-vacations] Variables de entorno:', {
   appUrl: APP_URL,
 });
 
+function formatDateToDDMMYYYY(dateStr: string): string {
+  if (!dateStr) return "Fecha no definida";
+  // Asumiendo formato yyyy-mm-dd
+  const [year, month, day] = dateStr.split('-');
+  if (!year || !month || !day) return dateStr;
+  return `${day}/${month}/${year}`;
+}
+
 function buildEmail(payload: Payload) {
   const { to, status, type, employeeName, start_date, end_date, comment, decidedByName } = payload;
 
@@ -39,7 +47,9 @@ function buildEmail(payload: Payload) {
   const fixedComment = comment?.trim() || "";
   const fixedDecidedByName = decidedByName?.trim() || "";
 
-  const range = end_date ? `${start_date} a ${end_date}` : start_date;
+  const formattedStartDate = formatDateToDDMMYYYY(start_date);
+  const formattedEndDate = end_date ? formatDateToDDMMYYYY(end_date) : null;
+  const range = formattedEndDate ? `${formattedStartDate} a ${formattedEndDate}` : formattedStartDate;
   const statusText = isApproved ? "aprobada" : "rechazada";
   const statusBg = isApproved ? "#d1fae5" : "#fee2e2";
   const statusColor = isApproved ? "#065f46" : "#7f1d1d";

@@ -34,6 +34,16 @@ export interface TaskAssignmentEmailPayload {
   end_time?: string | null;
   location?: string | null;
   description?: string | null;
+  isUpdate?: boolean; // true si es una edición, false/undefined si es creación
+  // Datos antiguos para comparación cuando isUpdate = true
+  old_start_date?: string | null;
+  old_start_time?: string | null;
+  old_end_time?: string | null;
+  old_location?: string | null;
+  // Flags para cambio de empleado
+  isEmployeeRemoval?: boolean; // true si se le quitó la tarea al empleado
+  isEmployeeReassignment?: boolean; // true si se le reasignó la tarea de otro empleado
+  previousEmployeeName?: string; // nombre del empleado anterior (para reasignación)
 }
 
 @Injectable({ providedIn: 'root' })

@@ -304,10 +304,15 @@ export class CalenderComponent {
   taskEmailDescription = '';
   isOpen = false;
 
-  // Control de conflictos
+  // Control de conflictos de horarios
   conflictEvent: any = null;
   showConflictModal = false;
   pendingEventData: any = null;
+
+  // Control de conflictos de ubicación
+  locationConflictEvent: any = null;
+  showLocationConflictModal = false;
+  pendingLocationConflictData: any = null;
 
   // Filtro de empleado
   selectedEmployeeFilter: number | 'all' = 'all';
@@ -864,6 +869,24 @@ export class CalenderComponent {
       return;
     }
 
+    // Detectar conflictos de ubicación (otro empleado en la misma ubicación, día y rango horario)
+    const locationConflict = this.detectLocationConflict();
+    if (locationConflict) {
+      this.locationConflictEvent = locationConflict;
+      this.pendingLocationConflictData = {
+        employeeId: this.eventEmployeeId,
+        location: this.eventLocation,
+        startDate: this.eventStartDate,
+        endDate: this.eventEndDate,
+        startTime: this.eventStartTime,
+        endTime: this.eventEndTime,
+        isUpdate: !!this.selectedEvent
+      };
+
+      this.showLocationConflictModal = true;
+      return;
+    }
+
     // Proceder con la creación/actualización del evento
     this.isAddEventLoading = true;
     this.proceedWithEventCreation().finally(() => {
@@ -891,6 +914,32 @@ export class CalenderComponent {
 
     try {
       if (this.selectedEvent) {
+        // Capturar datos antiguos antes de actualizar
+        const oldStartDateRaw = this.selectedEvent.start;
+        let oldStartDate = '';
+        if (oldStartDateRaw) {
+          if (typeof oldStartDateRaw === 'string') {
+            oldStartDate = oldStartDateRaw;
+          } else if (oldStartDateRaw instanceof Date) {
+            oldStartDate = this.formatLocalDate(oldStartDateRaw);
+          } else if (typeof oldStartDateRaw === 'number') {
+            oldStartDate = this.formatLocalDate(new Date(oldStartDateRaw));
+          } else if (Array.isArray(oldStartDateRaw)) {
+            // DateInput puede ser [year, month, day]
+            const [y, m, d] = oldStartDateRaw;
+            oldStartDate = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+          }
+        }
+        const oldStartTime = this.selectedEvent.extendedProps?.startTime || null;
+        const oldEndTime = this.selectedEvent.extendedProps?.endTime || null;
+        const oldLocationName = this.selectedEvent.extendedProps?.location || null;
+        const oldLocation = oldLocationName ? this.locations.find(l => l.name === oldLocationName) : null;
+        const oldEmployeeId = this.selectedEvent.extendedProps?.employeeId || null;
+        const oldEmployee = oldEmployeeId ? this.employees.find(e => e.id === oldEmployeeId) : null;
+
+        // Detectar cambio de empleado
+        const employeeChanged = oldEmployeeId && this.eventEmployeeId && oldEmployeeId !== this.eventEmployeeId;
+
         // Actualizar tarea existente en la base de datos
         await this.taskService.update(this.selectedEvent.id!, {
           title: generatedTitle,
@@ -904,6 +953,103 @@ export class CalenderComponent {
           is_vacation: false,
           vacation_type: null
         });
+
+        // Formatear horarios para eliminar segundos (HH:MM:SS -> HH:MM)
+        const formatTime = (time: string | null): string | null => {
+          if (!time) return null;
+          return time.substring(0, 5);
+        };
+
+        // Si cambió el empleado, enviar correos automáticamente (sin checkbox)
+        if (employeeChanged) {
+          // Correo al empleado antiguo: tarea eliminada
+          if (oldEmployee?.email) {
+            const payloadRemoval: TaskAssignmentEmailPayload = {
+              to: oldEmployee.email,
+              employeeName: oldEmployee.name,
+              assignedBy: this.currentUser?.name || 'Administrador',
+              taskTitle: generatedTitle,
+              start_date: oldStartDate,
+              end_date: this.eventEndDate || null,
+              start_time: formatTime(oldStartTime),
+              end_time: formatTime(oldEndTime),
+              location: oldLocation?.name || null,
+              description: null,
+              isUpdate: true,
+              isEmployeeRemoval: true // Nuevo flag para indicar eliminación por cambio de empleado
+            };
+
+            try {
+              await this.taskService.sendAssignmentEmail(payloadRemoval);
+              console.log('[CalendarComponent] ✅ Correo de eliminación enviado a:', oldEmployee.email);
+            } catch (emailError) {
+              console.error('[CalendarComponent] ❌ Error enviando correo de eliminación:', emailError);
+            }
+          }
+
+          // Correo al empleado nuevo: tarea reasignada
+          if (employee?.email) {
+            const payloadReassignment: TaskAssignmentEmailPayload = {
+              to: employee.email,
+              employeeName: employee.name,
+              assignedBy: this.currentUser?.name || 'Administrador',
+              taskTitle: generatedTitle,
+              start_date: this.eventStartDate,
+              end_date: this.eventEndDate || null,
+              start_time: formatTime(this.eventStartTime),
+              end_time: formatTime(this.eventEndTime),
+              location: location?.name || null,
+              description: null,
+              isUpdate: true,
+              isEmployeeReassignment: true, // Nuevo flag para indicar reasignación
+              previousEmployeeName: oldEmployee?.name || 'Empleado anterior'
+            };
+
+            try {
+              await this.taskService.sendAssignmentEmail(payloadReassignment);
+              console.log('[CalendarComponent] ✅ Correo de reasignación enviado a:', employee.email);
+            } catch (emailError) {
+              console.error('[CalendarComponent] ❌ Error enviando correo de reasignación:', emailError);
+            }
+          }
+        }
+        // Si NO cambió el empleado y se marca el checkbox, enviar correo de actualización normal
+        else if (this.sendTaskEmail) {
+          if (employee?.email) {
+            const payload: TaskAssignmentEmailPayload = {
+              to: employee.email,
+              employeeName: employee.name,
+              assignedBy: this.currentUser?.name || 'Administrador',
+              taskTitle: generatedTitle,
+              start_date: this.eventStartDate,
+              end_date: this.eventEndDate || null,
+              start_time: formatTime(this.eventStartTime),
+              end_time: formatTime(this.eventEndTime),
+              location: location?.name || null,
+              description: this.taskEmailDescription?.trim() || null,
+              isUpdate: true, // Indicar que es una edición
+              // Datos antiguos para comparación
+              old_start_date: oldStartDate,
+              old_start_time: formatTime(oldStartTime),
+              old_end_time: formatTime(oldEndTime),
+              old_location: oldLocation?.name || null
+            };
+
+            try {
+              await this.taskService.sendAssignmentEmail(payload);
+              this.showTaskEmailSentModal(
+                generatedTitle,
+                employee.name,
+                this.taskEmailDescription?.trim() || ''
+              );
+            } catch (emailError) {
+              console.error('[CalendarComponent] ❌ Error enviando correo de tarea actualizada:', emailError);
+              this.showAlert('warning', 'Correo no enviado', 'La tarea se actualizó pero no se pudo enviar el correo.');
+            }
+          } else {
+            this.showAlert('warning', 'Correo no enviado', 'La tarea se actualizó pero el empleado no tiene correo registrado.');
+          }
+        }
 
         // Recargar tareas
         await this.loadTasks();
@@ -933,6 +1079,12 @@ export class CalenderComponent {
 
         if (this.sendTaskEmail) {
           if (employee?.email) {
+            // Formatear horarios para eliminar segundos (HH:MM:SS -> HH:MM)
+            const formatTime = (time: string | null): string | null => {
+              if (!time) return null;
+              return time.substring(0, 5);
+            };
+
             const payload: TaskAssignmentEmailPayload = {
               to: employee.email,
               employeeName: employee.name,
@@ -940,8 +1092,8 @@ export class CalenderComponent {
               taskTitle: generatedTitle,
               start_date: this.eventStartDate,
               end_date: this.eventEndDate || null,
-              start_time: this.eventStartTime,
-              end_time: this.eventEndTime,
+              start_time: formatTime(this.eventStartTime),
+              end_time: formatTime(this.eventEndTime),
               location: location?.name || null,
               description: this.taskEmailDescription?.trim() || null
             };
@@ -1014,6 +1166,21 @@ export class CalenderComponent {
     this.showConflictModal = false;
     this.conflictEvent = null;
     this.pendingEventData = null;
+  }
+
+  rejectLocationConflictCreation() {
+    this.showLocationConflictModal = false;
+    this.locationConflictEvent = null;
+    this.pendingLocationConflictData = null;
+  }
+
+  proceedWithLocationConflictCreation() {
+    this.showLocationConflictModal = false;
+    // Proceder con la creación del evento ignorando el conflicto de ubicación
+    this.isAddEventLoading = true;
+    this.proceedWithEventCreation().finally(() => {
+      this.isAddEventLoading = false;
+    });
   }
 
   private applyEmployeeFilter() {
@@ -1334,6 +1501,51 @@ export class CalenderComponent {
 
       if (event.extendedProps.employeeId !== this.eventEmployeeId) {
         return false; // Diferente empleado
+      }
+
+      const eventDate = this.formatLocalDate(new Date(event.start as string));
+      if (eventDate !== newEventDate) {
+        return false; // Diferente día
+      }
+
+      // Comparar rangos de horas
+      const existingStart = this.timeStringToMinutes(event.extendedProps.startTime || '09:00');
+      const existingEnd = this.timeStringToMinutes(event.extendedProps.endTime || '17:00');
+
+      // Hay conflicto si los rangos se solapan
+      return !(newEventEnd <= existingStart || newEventStart >= existingEnd);
+    });
+
+    return conflictingEvent || null;
+  }
+
+  /**
+   * Detecta si ya hay otro empleado en la misma ubicación, día y rango horario
+   */
+  private detectLocationConflict(): any {
+    if (!this.eventLocation || !this.eventStartDate) {
+      return null;
+    }
+
+    const newEventStart = this.timeStringToMinutes(this.eventStartTime);
+    const newEventEnd = this.timeStringToMinutes(this.eventEndTime);
+    const newEventDate = this.eventStartDate;
+
+    // Buscar eventos de OTROS empleados en la misma ubicación en el mismo día
+    const conflictingEvent = this.allEvents.find(event => {
+      // Ignorar el evento actual si lo estamos editando
+      if (this.selectedEvent && (event.id === this.selectedEvent.id || String(event.id) === String(this.selectedEvent.id))) {
+        return false;
+      }
+
+      // Ignorar eventos del mismo empleado (solo importa si OTRO empleado está en la ubicación)
+      if (event.extendedProps.employeeId === this.eventEmployeeId) {
+        return false;
+      }
+
+      // Verificar que sea la misma ubicación
+      if (event.extendedProps.location !== this.eventLocation) {
+        return false;
       }
 
       const eventDate = this.formatLocalDate(new Date(event.start as string));
