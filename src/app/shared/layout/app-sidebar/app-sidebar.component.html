@@ -178,6 +178,7 @@
                       [routerLinkActiveOptions]="{ exact: true }"
                       class="menu-item group"
                       [ngClass]="{ 'menu-item-inactive': !isActive(nav.path) }"
+                      (click)="onSubmenuClick()"
                     >
                       <span
                         class="menu-item-icon-size"
