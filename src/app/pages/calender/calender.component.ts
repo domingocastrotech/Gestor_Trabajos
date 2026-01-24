@@ -12,7 +12,7 @@ import interactionPlugin from '@fullcalendar/interaction';
 import { ModalComponent } from '../../shared/components/ui/modal/modal.component';
 import { AlertComponent } from '../../shared/components/ui/alert/alert.component';
 import { NotificationService } from '../../shared/services/notification.service';
-import { TaskService, Task } from '../../shared/services/task.service';
+import { TaskService, Task, TaskAssignmentEmailPayload } from '../../shared/services/task.service';
 import { VacationService, VacationRequest as VacationRequestDB } from '../../shared/services/vacation.service';
 import { EmployeeService, Employee } from '../../shared/services/employee.service';
 import { LocationService, Location } from '../../shared/services/location.service';
@@ -300,6 +300,8 @@ export class CalenderComponent {
   eventEmployeeId: number | undefined = undefined;
   eventStartTime = '09:00';
   eventEndTime = '17:00';
+  sendTaskEmail = false;
+  taskEmailDescription = '';
   isOpen = false;
 
   // Control de conflictos
@@ -374,6 +376,20 @@ export class CalenderComponent {
     vacationType: '',
     startDate: '',
     endDate: ''
+  };
+
+  // Modal de confirmación de correo de tarea
+  taskEmailSentModal: {
+    isOpen: boolean;
+    taskTitle: string;
+    employeeName: string;
+    description?: string;
+    autoCloseTimer?: ReturnType<typeof setTimeout>;
+  } = {
+    isOpen: false,
+    taskTitle: '',
+    employeeName: '',
+    description: '',
   };
 
   // Modal de resultado de decisión de vacaciones
@@ -804,6 +820,8 @@ export class CalenderComponent {
     this.eventEmployeeId = event.extendedProps['employeeId'];
     this.eventStartTime = event.extendedProps['startTime'] || '09:00';
     this.eventEndTime = event.extendedProps['endTime'] || '17:00';
+    this.sendTaskEmail = false;
+    this.taskEmailDescription = '';
     this.openModal();
   }
 
@@ -912,6 +930,37 @@ export class CalenderComponent {
           is_vacation: false,
           vacation_type: null
         });
+
+        if (this.sendTaskEmail) {
+          if (employee?.email) {
+            const payload: TaskAssignmentEmailPayload = {
+              to: employee.email,
+              employeeName: employee.name,
+              assignedBy: this.currentUser?.name || 'Administrador',
+              taskTitle: generatedTitle,
+              start_date: this.eventStartDate,
+              end_date: this.eventEndDate || null,
+              start_time: this.eventStartTime,
+              end_time: this.eventEndTime,
+              location: location?.name || null,
+              description: this.taskEmailDescription?.trim() || null
+            };
+
+            try {
+              await this.taskService.sendAssignmentEmail(payload);
+              this.showTaskEmailSentModal(
+                generatedTitle,
+                employee.name,
+                this.taskEmailDescription?.trim() || ''
+              );
+            } catch (emailError) {
+              console.error('[CalendarComponent] ❌ Error enviando correo de tarea:', emailError);
+              this.showAlert('warning', 'Correo no enviado', 'La tarea se creó pero no se pudo enviar el correo.');
+            }
+          } else {
+            this.showAlert('warning', 'Correo no enviado', 'La tarea se creó pero el empleado no tiene correo registrado.');
+          }
+        }
 
         // Recargar tareas desde la base de datos para asegurar consistencia
         await this.loadTasks();
@@ -1060,6 +1109,8 @@ export class CalenderComponent {
     this.eventEmployeeId = ev.extendedProps['employeeId'];
     this.eventStartTime = ev.extendedProps['startTime'] || '09:00';
     this.eventEndTime = ev.extendedProps['endTime'] || '17:00';
+    this.sendTaskEmail = false;
+    this.taskEmailDescription = '';
 
     this.isDayModalOpen = false;
     this.openModal();
@@ -1195,6 +1246,8 @@ export class CalenderComponent {
     this.eventEmployeeId = undefined;
     this.eventStartTime = '09:00';
     this.eventEndTime = '17:00';
+    this.sendTaskEmail = false;
+    this.taskEmailDescription = '';
     this.selectedEvent = null;
   }
 
@@ -1768,6 +1821,34 @@ export class CalenderComponent {
       autoCloseTimer: setTimeout(() => {
         this.closeVacationRequestSentModal();
       }, 5000)
+    };
+    this.changeDetectorRef.detectChanges();
+  }
+
+  showTaskEmailSentModal(taskTitle: string, employeeName: string, description: string) {
+    if (this.taskEmailSentModal.autoCloseTimer) {
+      clearTimeout(this.taskEmailSentModal.autoCloseTimer);
+    }
+
+    this.taskEmailSentModal = {
+      isOpen: true,
+      taskTitle,
+      employeeName,
+      description,
+      autoCloseTimer: setTimeout(() => this.closeTaskEmailSentModal(), 5000)
+    };
+    this.changeDetectorRef.detectChanges();
+  }
+
+  closeTaskEmailSentModal() {
+    if (this.taskEmailSentModal.autoCloseTimer) {
+      clearTimeout(this.taskEmailSentModal.autoCloseTimer);
+    }
+    this.taskEmailSentModal = {
+      isOpen: false,
+      taskTitle: '',
+      employeeName: '',
+      description: ''
     };
     this.changeDetectorRef.detectChanges();
   }

@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { environment } from '../../../environments/environment';
 import { SupabaseService } from './supabase.service';
 
 export interface Task {
@@ -21,6 +22,19 @@ export interface Task {
 
 export type TaskInsert = Omit<Task, 'id' | 'created_at'>;
 export type TaskUpdate = Partial<TaskInsert>;
+
+export interface TaskAssignmentEmailPayload {
+  to: string;
+  employeeName: string;
+  assignedBy?: string;
+  taskTitle: string;
+  start_date: string;
+  end_date?: string | null;
+  start_time?: string | null;
+  end_time?: string | null;
+  location?: string | null;
+  description?: string | null;
+}
 
 @Injectable({ providedIn: 'root' })
 export class TaskService {
@@ -89,5 +103,25 @@ export class TaskService {
       .eq('id', id);
 
     if (error) throw error;
+  }
+
+  async sendAssignmentEmail(payload: TaskAssignmentEmailPayload): Promise<void> {
+    const { data } = await this.supabase.supabase.auth.getSession();
+    const authToken = data.session?.access_token || environment.supabaseKey;
+    const functionUrl = `${this.supabase.supabaseUrl}/functions/v1/Mail-send-task`;
+
+    const response = await fetch(functionUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authToken}`
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Error enviando correo de tarea: ${response.status} ${errorText}`);
+    }
   }
 }

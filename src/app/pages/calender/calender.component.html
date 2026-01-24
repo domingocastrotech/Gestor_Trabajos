@@ -222,6 +222,39 @@
         </div>
       </div>
 
+      <div class="mt-4 flex items-start gap-3">
+        <input
+          id="send-task-email"
+          type="checkbox"
+          class="mt-1 h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500 dark:border-gray-600"
+          [(ngModel)]="sendTaskEmail"
+          [disabled]="!!selectedEvent || !eventEmployeeId"
+        />
+        <label for="send-task-email" class="text-sm text-gray-700 dark:text-gray-300">
+          Enviar esta tarea por correo electrónico al empleado seleccionado.
+          @if (!eventEmployeeId) {
+            <span class="block text-xs text-gray-500 dark:text-gray-400">Selecciona un empleado para habilitar esta opción.</span>
+          }
+          @if (!!selectedEvent) {
+            <span class="block text-xs text-gray-500 dark:text-gray-400">Disponible solo al crear una nueva tarea.</span>
+          }
+        </label>
+      </div>
+
+      @if (sendTaskEmail) {
+        <div class="mt-4">
+          <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
+            Descripción para el correo (opcional)
+          </label>
+          <textarea
+            [(ngModel)]="taskEmailDescription"
+            rows="3"
+            class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+            placeholder="Motivo o detalles de la tarea de emergencia"
+          ></textarea>
+        </div>
+      }
+
       <div class="flex items-center gap-3 mt-6 modal-footer sm:justify-end">
         <button
           (click)="closeModal()"
@@ -1088,6 +1121,51 @@
       <p class="text-xs text-gray-400 dark:text-gray-500 mt-3">
         Se cerrará automáticamente en 5 segundos
       </p>
+    </div>
+  </app-modal>
+
+  <!-- Modal: Correo de tarea enviado -->
+  <app-modal
+    [isOpen]="taskEmailSentModal.isOpen"
+    [showCloseButton]="true"
+    (onClose)="closeTaskEmailSentModal()"
+  >
+    <div class="flex flex-col items-center justify-center p-6 text-center">
+      <div class="mb-4">
+        <div class="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+          <svg class="w-10 h-10 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+        </div>
+      </div>
+
+      <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+        Correo enviado al empleado
+      </h3>
+      <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">
+        <strong>{{ taskEmailSentModal.employeeName }}</strong> recibió la tarea:
+      </p>
+      <p class="text-sm text-gray-800 dark:text-gray-200 font-medium mb-3">
+        {{ taskEmailSentModal.taskTitle }}
+      </p>
+
+      @if (taskEmailSentModal.description) {
+        <div class="bg-amber-50 dark:bg-amber-900/30 rounded-lg p-4 mb-3 w-full text-center border border-amber-100 dark:border-amber-800/60">
+          <p class="text-xs uppercase tracking-wide text-amber-700 dark:text-amber-200 font-semibold mb-1">Motivo / Detalles</p>
+          <p class="text-sm text-amber-900 dark:text-amber-100 whitespace-pre-wrap">{{ taskEmailSentModal.description }}</p>
+        </div>
+      }
+
+      <p class="text-xs text-gray-500 dark:text-gray-500">Revisa también la carpeta de spam si no lo ves.</p>
+
+      <button
+        type="button"
+        (click)="closeTaskEmailSentModal()"
+        class="mt-4 inline-flex items-center justify-center gap-2 rounded-lg px-6 py-2.5 text-sm font-medium text-white bg-green-600 hover:bg-green-700 shadow-theme-sm transition focus:outline-none focus:ring-2 focus:ring-green-200 dark:bg-green-500/80 dark:hover:bg-green-600"
+      >
+        Cerrar
+      </button>
+      <p class="mt-3 text-xs text-gray-400 dark:text-gray-500">Se cerrará automáticamente en unos segundos.</p>
     </div>
   </app-modal>
 </div>
