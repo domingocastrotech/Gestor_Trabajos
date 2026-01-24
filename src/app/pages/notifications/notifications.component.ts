@@ -6,7 +6,6 @@ import { NotificationService, Notification } from '../../shared/services/notific
   selector: 'app-notifications',
   imports: [CommonModule],
   templateUrl: './notifications.component.html',
-  styleUrls: ['./notifications.component.css']
 })
 export class NotificationsComponent implements OnInit {
   notifications: Notification[] = [];
