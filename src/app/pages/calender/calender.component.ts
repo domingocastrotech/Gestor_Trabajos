@@ -661,8 +661,12 @@ export class CalenderComponent {
     if (event) {
       const target = event.target as HTMLElement;
       // Verificar si el target es el badge o está dentro del badge
-      if (target.closest('.missing-location-badge')) {
+      if (target.closest('.missing-location-badge') ||
+          target.classList.contains('missing-location-badge')) {
         // No abrir el modal si se clickeó el badge
+        console.log('[CalendarComponent] Click en badge detectado, no abriendo modal');
+        event.stopPropagation();
+        event.preventDefault();
         return;
       }
     }
@@ -2048,6 +2052,7 @@ export class CalenderComponent {
         // Variable para mantener referencia al tooltip
         let tooltip: HTMLElement | null = null;
         let isTooltipVisible = false;
+        let autoCloseTimer: any = null;
 
         // Evento mouseenter - mostrar tooltip
         const showTooltip = (e: MouseEvent | TouchEvent) => {
@@ -2115,10 +2120,24 @@ export class CalenderComponent {
               tooltip.style.transition = 'opacity 0.2s ease';
             }
           }, 10);
+
+          // Auto-cerrar después de 10 segundos
+          if (autoCloseTimer) {
+            clearTimeout(autoCloseTimer);
+          }
+          autoCloseTimer = setTimeout(() => {
+            hideTooltip();
+          }, 10000);
         };
 
         // Evento mouseleave - ocultar tooltip
         const hideTooltip = () => {
+          // Limpiar el timer de auto-cierre
+          if (autoCloseTimer) {
+            clearTimeout(autoCloseTimer);
+            autoCloseTimer = null;
+          }
+
           isTooltipVisible = false;
           if (tooltip && tooltip.parentNode) {
             tooltip.style.opacity = '0';
@@ -2133,6 +2152,7 @@ export class CalenderComponent {
 
         // Función toggle para móvil
         const toggleTooltip = (e: Event) => {
+          console.log('[CalendarComponent] toggleTooltip llamado');
           e.stopPropagation(); // Prevenir que el click abra el modal
           e.stopImmediatePropagation(); // Detener todos los handlers
           e.preventDefault();
@@ -2142,6 +2162,8 @@ export class CalenderComponent {
           } else {
             showTooltip(e as MouseEvent);
           }
+
+          return false; // Prevenir comportamiento por defecto adicional
         };
 
         // Detectar si es dispositivo táctil
@@ -2149,15 +2171,25 @@ export class CalenderComponent {
 
         // Agregar eventos al badge
         if (isTouchDevice) {
-          // En móvil, usar click/touch con capture para interceptar antes
-          badge.addEventListener('click', toggleTooltip, true);
+          // En móvil, manejar todo en touchend
           badge.addEventListener('touchstart', (e) => {
+            console.log('[CalendarComponent] touchstart en badge');
             e.stopPropagation();
             e.stopImmediatePropagation();
           }, true);
+
           badge.addEventListener('touchend', (e) => {
+            console.log('[CalendarComponent] touchend en badge - ejecutando toggle');
             e.stopPropagation();
             e.stopImmediatePropagation();
+            e.preventDefault(); // Prevenir el click sintético
+
+            // Ejecutar toggle directamente aquí
+            if (isTooltipVisible) {
+              hideTooltip();
+            } else {
+              showTooltip(e as any);
+            }
           }, true);
         } else {
           // En desktop, usar hover
