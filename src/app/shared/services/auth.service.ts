@@ -25,6 +25,7 @@ export interface Employee {
 export class AuthService {
   private userSignal = signal<GoogleUser | null>(null);
   private employeeSignal = signal<Employee | null>(null);
+  private loadingSignal = signal<boolean>(true);
   private readonly storageKey = 'googleUser';
 
   constructor(
@@ -34,7 +35,12 @@ export class AuthService {
     @Inject(PLATFORM_ID) private platformId: object,
   ) {
     console.log('[AuthService] Initializing...');
-    this.restoreUser();
+    this.restoreUser().finally(async () => {
+      // Esperar lo suficiente para que Angular renderice completamente
+      await new Promise(resolve => setTimeout(resolve, 2500));
+      this.loadingSignal.set(false);
+      console.log('[AuthService] Profile loading complete');
+    });
     console.log('[AuthService] Initialized. User:', this.userSignal());
   }
 
@@ -44,6 +50,10 @@ export class AuthService {
 
   get employee(): Employee | null {
     return this.employeeSignal();
+  }
+
+  get isLoading(): boolean {
+    return this.loadingSignal();
   }
 
   isAuthenticated(): boolean {

@@ -1,12 +1,8 @@
-import { Component, OnInit, Input } from '@angular/core';
-import { Router } from '@angular/router';
-import { AuthService } from '../../../shared/services/auth.service';
-import { CommonModule } from '@angular/common';
+import { Component } from '@angular/core';
 
 @Component({
-  selector: 'app-auth-callback',
+  selector: 'app-auth-callback-loading',
   standalone: true,
-  imports: [CommonModule],
   template: `
     <div class="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 overflow-hidden">
       <!-- Decoración de fondo -->
@@ -33,7 +29,7 @@ import { CommonModule } from '@angular/common';
 
         <!-- Título -->
         <h1 class="text-3xl font-bold text-white mb-3">
-          Procesando autenticación
+          Cargando perfil
         </h1>
 
         <!-- Descripción -->
@@ -81,52 +77,5 @@ import { CommonModule } from '@angular/common';
   `,
   styles: ``
 })
-export class AuthCallbackComponent implements OnInit {
-  @Input() isLoadingScreen = false; // Si es true, solo muestra la UI sin ejecutar lógica
-
-  constructor(
-    private authService: AuthService,
-    private router: Router
-  ) {}
-
-  async ngOnInit() {
-    // Si es solo para mostrar la pantalla de carga, no hacer nada
-    if (this.isLoadingScreen) {
-      return;
-    }
-
-    try {
-      console.log('[AuthCallback] Procesando callback de autenticación...');
-
-      const user = await this.authService.handleAuthCallback();
-
-      if (user) {
-        console.log('[AuthCallback] Usuario autenticado correctamente');
-
-        // Esperar un momento para que se cargue el empleado
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        // Verificar si el usuario está registrado como empleado
-        const isEmployee = this.authService.isEmployee();
-
-        if (isEmployee) {
-          console.log('[AuthCallback] Usuario registrado como empleado, redirigiendo a dashboard');
-          this.router.navigate(['/']);
-        } else {
-          console.warn('[AuthCallback] Usuario no registrado como empleado, redirigiendo a unauthorized');
-          this.router.navigate(['/unauthorized']);
-        }
-      } else {
-        console.error('[AuthCallback] No se pudo autenticar el usuario');
-        this.router.navigate(['/signin'], {
-          queryParams: { error: 'authentication_failed' }
-        });
-      }
-    } catch (error) {
-      console.error('[AuthCallback] Error procesando callback:', error);
-      this.router.navigate(['/signin'], {
-        queryParams: { error: 'callback_error' }
-      });
-    }
-  }
+export class AuthCallbackLoadingComponent {
 }

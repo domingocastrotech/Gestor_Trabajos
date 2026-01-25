@@ -10,22 +10,18 @@ export const authGuard: CanActivateFn = async (): Promise<boolean | UrlTree> => 
   const router = inject(Router);
 
   try {
-    // Esperar a que Supabase restaure la sesión con más tiempo
-    console.log('[AuthGuard] Waiting for Supabase session restoration...');
-    let session = await supabase.getSession();
-    console.log('[AuthGuard] First session check:', session ? 'exists' : 'null');
-
-    // Si no hay sesión, esperar más tiempo y reintentar
-    if (!session) {
-      console.log('[AuthGuard] No session on first check, waiting 1s and retrying...');
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      session = await supabase.getSession();
-      console.log('[AuthGuard] Second session check:', session ? 'exists' : 'null');
+    // Esperar a que el AuthService termine de cargar el perfil
+    console.log('[AuthGuard] Waiting for AuthService profile loading...');
+    let attempts = 0;
+    while (auth.isLoading && attempts < 30) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      attempts++;
     }
+    console.log('[AuthGuard] Profile loading complete after', attempts * 100, 'ms');
 
-    // Esperar a que AuthService se sincronice completamente con la sesión
-    console.log('[AuthGuard] Waiting for AuthService to sync...');
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Obtener la sesión de Supabase
+    const session = await supabase.getSession();
+    console.log('[AuthGuard] Session check:', session ? 'exists' : 'null');
 
     const isAuth = auth.isAuthenticated();
     console.log('[AuthGuard] isAuthenticated:', isAuth);

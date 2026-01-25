@@ -1,1 +1,11 @@
-<router-outlet></router-outlet>
+<div 
+  class="fixed inset-0 transition-opacity duration-500 z-50 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900"
+  [class.opacity-0]="!isLoadingProfile"
+  [class.pointer-events-none]="!isLoadingProfile"
+>
+  <app-auth-callback [isLoadingScreen]="true"></app-auth-callback>
+</div>
+
+<div class="min-h-screen transition-opacity duration-500" [class.opacity-0]="isLoadingProfile">
+  <router-outlet></router-outlet>
+</div>
