@@ -23,6 +23,12 @@ export const authGuard: CanActivateFn = async (): Promise<boolean | UrlTree> => 
     const session = await supabase.getSession();
     console.log('[AuthGuard] Session check:', session ? 'exists' : 'null');
 
+    // Si la sesión o el usuario están indefinidos, forzar inicio de sesión
+    if (!session?.user) {
+      console.log('[AuthGuard] Session user is undefined, redirecting to /signin');
+      return router.createUrlTree(['/signin']);
+    }
+
     const isAuth = auth.isAuthenticated();
     console.log('[AuthGuard] isAuthenticated:', isAuth);
 
