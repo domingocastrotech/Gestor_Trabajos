@@ -1,6 +1,7 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, OnInit, HostBinding } from '@angular/core';
 import { Router, NavigationStart, NavigationEnd, NavigationCancel, NavigationError, Event, RouterModule } from '@angular/router';
 import { AuthService } from './shared/services/auth.service';
+import { ThemeService } from './shared/services/theme.service';
 import { AuthCallbackComponent } from './pages/auth-pages/auth-callback/auth-callback.component';
 import { CommonModule } from '@angular/common';
 
@@ -15,10 +16,19 @@ import { CommonModule } from '@angular/common';
   templateUrl: './app.component.html',
   styleUrl: './app.component.css',
 })
-export class AppComponent {
+export class AppComponent implements OnInit {
   title = 'Gestor de Trabajo';
   authService = inject(AuthService);
   router = inject(Router);
+  themeService = inject(ThemeService);
+
+  @HostBinding('class.dark') isDark = false;
+
+  ngOnInit() {
+    this.themeService.theme$.subscribe(theme => {
+      this.isDark = theme === 'dark';
+    });
+  }
 
   get isLoadingProfile(): boolean {
     // Solo mostrar la pantalla de carga en la carga inicial
@@ -26,4 +36,5 @@ export class AppComponent {
     return this.authService.isLoading;
   }
 }
+
 

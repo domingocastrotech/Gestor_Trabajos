@@ -537,7 +537,7 @@ export class CalenderComponent {
         center: 'title',
         right: isMobile ? '' : 'dayGridMonth'
       },
-      editable: true,
+      editable: false,
       selectable: true,
       events: [],
       select: (info) => this.handleDateSelect(info),
@@ -780,6 +780,7 @@ export class CalenderComponent {
     const newCalendarOptions: CalendarOptions = {
       ...this.calendarOptions,
       events: this.events,
+      editable: false,
       dateClick: (info) => this.handleDayClick(info.dateStr, info.allDay, info.jsEvent),
       select: (info) => this.handleDateSelect(info),
       eventClick: (info) => this.handleEventClick(info),
@@ -1529,9 +1530,9 @@ export class CalenderComponent {
                data-event-id="${eventInfo.event.id}"
                onmouseenter="console.log('[tooltip] mouseenter en vacation badge', this)"
                onmouseleave="console.log('[tooltip] mouseleave en vacation badge', this)"
-               style="background: linear-gradient(135deg, ${lighterColor} 0%, ${bgColor} 100%); 
-                       border-left: 4px solid ${borderColor}; 
-                       border-radius: 6px; 
+               style="background: linear-gradient(135deg, ${lighterColor} 0%, ${bgColor} 100%);
+                       border-left: 4px solid ${borderColor};
+                       border-radius: 6px;
                        color: white;
                        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.2);
                        padding: 5px 6px;
@@ -1553,10 +1554,10 @@ export class CalenderComponent {
 
     const hasDetails = location || (startTimeFormatted && endTimeFormatted);
     const employeeDisplayName = employeeName || 'Tarea';
-    
+
     return {
       html: `
-        <div class="event-card task-card" 
+        <div class="event-card task-card"
              style="background: linear-gradient(135deg, ${lighterColor} 0%, ${bgColor} 100%);
                      border-left: 4px solid ${borderColor};
                      border-radius: 6px;
